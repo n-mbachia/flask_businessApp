@@ -1,0 +1,225 @@
+{% extends "_base.html" %}
+
+{% block title %}Manage Costs{% endblock %}
+
+{% block head %}
+{{ super() }}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0 text-gray-800">Cost Management</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCostModal">
+            <i class="fas fa-plus me-1"></i> Add Cost
+        </button>
+    </div>
+
+    <!-- Summary Cards (using backend totals) -->
+    <div class="row mb-4">
+        <div class="col-md-4 mb-4">
+            <div class="card border-left-primary h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                        Total Costs</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        ${{ "%.2f"|format(total_costs) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card border-left-success h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                        Fixed Costs</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        ${{ "%.2f"|format(fixed_costs) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4 mb-4">
+            <div class="card border-left-info h-100 py-2">
+                <div class="card-body">
+                    <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                        Variable Costs</div>
+                    <div class="h5 mb-0 font-weight-bold text-gray-800">
+                        ${{ "%.2f"|format(variable_costs) }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cost Entries Table -->
+    <div class="card shadow mb-4">
+        <div class="card-header py-3 d-flex justify-content-between align-items-center">
+            <h6 class="m-0 font-weight-bold text-primary">Cost Entries</h6>
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" 
+                        id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-filter"></i> Filter
+                </button>
+                <div class="dropdown-menu dropdown-menu-end p-3" style="min-width: 300px;">
+                    <form method="get" id="filterForm">
+                        <div class="mb-3">
+                            <label class="form-label">Cost Type</label>
+                            <select name="cost_type" class="form-select form-select-sm">
+                                <option value="">All Types</option>
+                                {% for type in CostType %}
+                                <option value="{{ type.name }}" {% if request.args.get('cost_type') == type.name %}selected{% endif %}>
+                                    {{ type.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Classification</label>
+                            <select name="classification" class="form-select form-select-sm">
+                                <option value="">All Classifications</option>
+                                {% for class in CostClassification %}
+                                <option value="{{ class.name }}" {% if request.args.get('classification') == class.name %}selected{% endif %}>
+                                    {{ class.value }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary btn-sm w-100">Apply Filters</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Description</th>
+                            <th>Type</th>
+                            <th>Classification</th>
+                            <th>Amount</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cost in costs %}
+                        <tr id="cost-row-{{ cost.id }}">
+                            <td>{{ cost.date.strftime('%Y-%m-%d') }}</td>
+                            <td>{{ cost.description|truncate(30) if cost.description else 'No description' }}</td>
+                            <td>
+                                <span class="badge bg-{{ 'primary' if cost.is_direct else 'secondary' }}">
+                                    {{ cost.cost_type.value }}
+                                </span>
+                            </td>
+                            <td>
+                                {% if cost.classification.value == 'FIXED' %}
+                                    <span class="badge bg-primary">Fixed</span>
+                                {% elif cost.classification.value == 'VARIABLE' %}
+                                    <span class="badge bg-success">Variable</span>
+                                {% else %}
+                                    <span class="badge bg-info">Semi-Variable</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ "%.2f"|format(cost.amount) }}</td>
+                            <td>
+                                <a href="{{ url_for('costs.edit_cost', cost_id=cost.id, **request.args) }}" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   data-bs-toggle="tooltip" 
+                                   title="Edit">
+                                    <i class="fas fa-edit"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-danger delete-cost-btn" 
+                                        data-cost-id="{{ cost.id }}"
+                                        data-bs-toggle="tooltip" 
+                                        title="Delete">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-4">
+                                No cost entries found.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Cost Modal (unchanged except added id to form for potential JS) -->
+<div class="modal fade" id="addCostModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Cost</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('costs.manage_costs', **request.args) }}">
+                {{ form.csrf_token }}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        {{ form.date.label(class="form-label") }}
+                        {{ form.date(class="form-control") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.amount.label(class="form-label") }}
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            {{ form.amount(class="form-control", step="0.01") }}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        {{ form.cost_type.label(class="form-label") }}
+                        {{ form.cost_type(class="form-select") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.classification.label(class="form-label") }}
+                        {{ form.classification(class="form-select") }}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_direct(class="form-check-input") }}
+                        {{ form.is_direct.label(class="form-check-label") }}
+                    </div>
+                    <div class="mb-3" id="productField" style="display: none;">
+                        {{ form.product_id.label(class="form-label") }}
+                        {{ form.product_id(class="form-select") }}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_tax_deductible(class="form-check-input") }}
+                        {{ form.is_tax_deductible.label(class="form-check-label") }}
+                    </div>
+                    <div class="mb-3">
+                        {{ form.description.label(class="form-label") }}
+                        {{ form.description(class="form-control", rows="2") }}
+                    </div>
+                    <div class="mb-3 form-check">
+                        {{ form.is_recurring(class="form-check-input") }}
+                        {{ form.is_recurring.label(class="form-check-label") }}
+                    </div>
+                    <div class="mb-3" id="recurrenceField" style="display: none;">
+                        {{ form.recurrence_frequency.label(class="form-label") }}
+                        {{ form.recurrence_frequency(class="form-select") }}
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Cost</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/pages/costs.js') }}"></script>
+{% endblock %}

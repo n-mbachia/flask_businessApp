@@ -1,0 +1,428 @@
+{% extends "_base.html" %}
+
+{% block title %}Products{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link href="{{ url_for('static', filename='css/products-management.css') }}" rel="stylesheet">
+<style>
+    /* Additional inline styles for better UI */
+    .margin-badge {
+        font-size: 0.9rem;
+        padding: 0.35rem 0.65rem;
+    }
+    .card-header h5 {
+        margin-bottom: 0;
+    }
+    #initialQuantityField {
+        transition: opacity 0.2s ease;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Manage Products</h2>
+        <button type="button" class="btn btn-outline-primary" id="clearFormBtn">
+            <i class="fas fa-plus-circle me-1"></i>New Product
+        </button>
+    </div>
+
+    <!-- Product Form Card -->
+    <div class="card shadow-sm mb-5">
+        <div class="card-header bg-white">
+            <h5 class="mb-0" id="formTitle">Add New Product</h5>
+        </div>
+        <div class="card-body">
+            <form id="productForm" method="POST" action="{{ url_for('products.manage_products') }}" enctype="multipart/form-data" novalidate>
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="product_id" id="product_id">
+
+                <div class="row g-3">
+                    <!-- Basic Information -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label fw-semibold") }}
+                            {{ form.name(class="form-control", id="name", placeholder="e.g., Wireless Headphones") }}
+                            {% for error in form.name.errors %}
+                                <div class="text-danger small mt-1"><i class="fas fa-exclamation-circle me-1"></i>{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        <div class="mb-3">
+                            {{ form.description.label(class="form-label fw-semibold") }}
+                            {{ form.description(class="form-control", id="description", rows="3", placeholder="Brief description...") }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="image" class="form-label fw-semibold">Product Image</label>
+                            <input class="form-control" type="file" id="image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+                            <div class="form-text">Optional image shown in listings and storefront.</div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.sku.label(class="form-label fw-semibold") }}
+                                {{ form.sku(class="form-control", id="sku", placeholder="Auto-generated if empty") }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.barcode.label(class="form-label fw-semibold") }}
+                                {{ form.barcode(class="form-control", id="barcode", placeholder="UPC / EAN") }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label fw-semibold") }}
+                            {{ form.category(class="form-select", id="category") }}
+                        </div>
+                    </div>
+
+                    <!-- Pricing & Inventory -->
+                    <div class="col-md-6">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                {{ form.cogs_per_unit.label(class="form-label fw-semibold") }}
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.cogs_per_unit(class="form-control", id="cogs_per_unit", step="0.01", placeholder="0.00") }}
+                                </div>
+                                {% for error in form.cogs_per_unit.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                {{ form.selling_price_per_unit.label(class="form-label fw-semibold") }}
+                                <div class="input-group">
+                                    <span class="input-group-text">$</span>
+                                    {{ form.selling_price_per_unit(class="form-control", id="selling_price_per_unit", step="0.01", placeholder="0.00") }}
+                                </div>
+                                {% for error in form.selling_price_per_unit.errors %}
+                                    <div class="text-danger small mt-1">{{ error }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.reorder_level.label(class="form-label fw-semibold") }}
+                            {{ form.reorder_level(class="form-control", id="reorder_level", type="number", min="0") }}
+                        </div>
+
+                        <!-- Live margin display -->
+                        <div class="alert alert-light border mb-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold">Current Margin:</span>
+                                <span class="badge bg-primary fs-6" id="marginDisplay">0.00%</span>
+                            </div>
+                            <small class="text-muted">(Selling price - COGS) / Selling price</small>
+                        </div>
+
+                        <!-- Initial quantity (only visible when creating) -->
+                        <div class="mb-3" id="initialQuantityField">
+                            {{ form.initial_quantity.label(class="form-label fw-semibold") }}
+                            {{ form.initial_quantity(class="form-control", id="initial_quantity", type="number", min="0") }}
+                            <div class="form-text">Set initial stock level (will create inventory movement).</div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fas fa-save me-1"></i>Save Product
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary" id="cancelEditBtn">
+                        <i class="fas fa-times me-1"></i>Cancel
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Product List Card -->
+    <div class="card shadow-sm">
+        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Your Products</h5>
+            <div class="col-md-4">
+                <input type="text" class="form-control" id="productSearch" placeholder="Search products...">
+            </div>
+        </div>
+        <div class="card-body p-0">
+            {% if products and products.items %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="productsTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center">Image</th>
+                                <th>Name</th>
+                                <th>COGS</th>
+                                <th>Price</th>
+                                <th>Margin</th>
+                                <th>Threshold</th>
+                                <th>Status</th>
+                                <th>Stock</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for product in products.items %}
+                            <tr>
+                                <td class="text-center align-middle">
+                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="product-thumb">
+                                </td>
+                                <td>
+                                    <strong>{{ product.name }}</strong><br>
+                                    <small class="text-muted">{{ product.sku or '—' }}</small>
+                                </td>
+                                <td>${{ "%.2f"|format(product.cogs_per_unit) }}</td>
+                                <td>${{ "%.2f"|format(product.selling_price_per_unit) }}</td>
+                                <td class="{{ 'text-danger' if product.margin_percentage < product.effective_margin_threshold else 'text-success' }}">
+                                    {{ "%.1f"|format(product.margin_percentage) }}%
+                                </td>
+                                <td>{{ "%.1f"|format(product.effective_margin_threshold) }}%</td>
+                                <td>
+                                    {% if product.margin_percentage < product.effective_margin_threshold %}
+                                        <span class="badge bg-danger margin-badge"><i class="fas fa-exclamation-triangle me-1"></i>Below Threshold</span>
+                                    {% else %}
+                                        <span class="badge bg-success margin-badge"><i class="fas fa-check-circle me-1"></i>OK</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge {{ 'bg-warning' if product.current_stock <= product.reorder_level and product.current_stock > 0 else 'bg-secondary' if product.current_stock <= 0 else 'bg-info' }}">
+                                        {{ product.current_stock }} units
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a href="{{ url_for('products.product_analytics_dashboard', product_id=product.id) }}" 
+                                           class="btn btn-sm btn-outline-info" data-bs-toggle="tooltip" title="Analytics">
+                                            <i class="fas fa-chart-line"></i>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-warning edit-btn" 
+                                                data-product-id="{{ product.id }}"
+                                                data-bs-toggle="tooltip" title="Edit">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <form action="{{ url_for('products.delete_product', product_id=product.id) }}" 
+                                              method="POST" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" 
+                                                    onclick="return confirm('Are you sure you want to delete {{ product.name }}?');"
+                                                    data-bs-toggle="tooltip" title="Delete">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <small class="text-muted">Showing {{ products.page }} of {{ products.pages }} pages</small>
+                    <nav>
+                        <ul class="pagination pagination-sm mb-0">
+                            {% if products.has_prev %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('products.manage_products', page=products.prev_num) }}">Previous</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                            {% endif %}
+
+                            {% for page_num in products.iter_pages() %}
+                                {% if page_num %}
+                                    <li class="page-item {{ 'active' if page_num == products.page }}">
+                                        <a class="page-link" href="{{ url_for('products.manage_products', page=page_num) }}">{{ page_num }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if products.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="{{ url_for('products.manage_products', page=products.next_num) }}">Next</a>
+                                </li>
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">Next</span></li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                    <p class="lead">No products yet. Create your first product above.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Modal (Bootstrap 5) -->
+<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Product</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+                <div class="modal-body">
+                <form id="editForm" method="POST" action="{{ url_for('products.manage_products') }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    <input type="hidden" name="product_id" id="modal_product_id">
+
+                    <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Product Name</label>
+                                    <input type="text" class="form-control" id="modal_name" name="name">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">Description</label>
+                                    <textarea class="form-control" id="modal_description" name="description" rows="3"></textarea>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold" for="modal_image">Product Image</label>
+                                    <input type="file" class="form-control" id="modal_image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+                                    <div class="form-text">Upload to update the storefront image.</div>
+                                </div>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">SKU</label>
+                                    <input type="text" class="form-control" id="modal_sku" name="sku">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Barcode</label>
+                                    <input type="text" class="form-control" id="modal_barcode" name="barcode">
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Category</label>
+                                <select class="form-select" id="modal_category" name="category">
+                                    {% for value, label in form.category.choices %}
+                                        <option value="{{ value }}">{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">COGS per Unit</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" step="0.01" class="form-control" id="modal_cogs_per_unit" name="cogs_per_unit">
+                                    </div>
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="form-label fw-semibold">Selling Price</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" step="0.01" class="form-control" id="modal_selling_price_per_unit" name="selling_price_per_unit">
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Reorder Level</label>
+                                <input type="number" min="0" class="form-control" id="modal_reorder_level" name="reorder_level">
+                            </div>
+                            <div class="alert alert-light border">
+                                <div class="d-flex justify-content-between">
+                                    <span class="fw-semibold">Current Margin:</span>
+                                    <span class="badge bg-primary" id="modal_margin_display">0.00%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Update Product</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="fas fa-times me-1"></i>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/products-management.js') }}"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize tooltips
+        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+        tooltipTriggerList.map(function (el) { return new bootstrap.Tooltip(el); });
+
+        // Margin calculation for main form
+        function updateMargin() {
+            const cogs = parseFloat(document.getElementById('cogs_per_unit').value) || 0;
+            const price = parseFloat(document.getElementById('selling_price_per_unit').value) || 0;
+            const margin = price > 0 ? ((price - cogs) / price * 100).toFixed(2) : 0;
+            document.getElementById('marginDisplay').textContent = margin + '%';
+        }
+        document.getElementById('cogs_per_unit').addEventListener('input', updateMargin);
+        document.getElementById('selling_price_per_unit').addEventListener('input', updateMargin);
+
+        // Margin for modal (will be updated when product data is loaded)
+        function updateModalMargin() {
+            const cogs = parseFloat(document.getElementById('modal_cogs_per_unit').value) || 0;
+            const price = parseFloat(document.getElementById('modal_selling_price_per_unit').value) || 0;
+            const margin = price > 0 ? ((price - cogs) / price * 100).toFixed(2) : 0;
+            document.getElementById('modal_margin_display').textContent = margin + '%';
+        }
+        document.getElementById('modal_cogs_per_unit').addEventListener('input', updateModalMargin);
+        document.getElementById('modal_selling_price_per_unit').addEventListener('input', updateModalMargin);
+
+        // Toggle initial quantity field based on product_id presence
+        const productIdField = document.getElementById('product_id');
+        const initialQtyField = document.getElementById('initialQuantityField');
+        const formTitle = document.getElementById('formTitle');
+        const submitBtn = document.getElementById('submitBtn');
+        const cancelBtn = document.getElementById('cancelEditBtn');
+
+        function toggleInitialQty() {
+            if (productIdField.value && productIdField.value !== 'None') {
+                initialQtyField.style.display = 'none';
+                formTitle.textContent = 'Edit Product';
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Update Product';
+            } else {
+                initialQtyField.style.display = 'block';
+                formTitle.textContent = 'Add New Product';
+                submitBtn.innerHTML = '<i class="fas fa-save me-1"></i>Save Product';
+            }
+        }
+        toggleInitialQty();
+
+        // Clear form button
+        document.getElementById('clearFormBtn').addEventListener('click', function() {
+            document.getElementById('productForm').reset();
+            productIdField.value = '';
+            toggleInitialQty();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        // Cancel edit button (same as clear)
+        cancelBtn.addEventListener('click', function() {
+            document.getElementById('productForm').reset();
+            productIdField.value = '';
+            toggleInitialQty();
+        });
+
+        // Simple search filter (client-side)
+        const searchInput = document.getElementById('productSearch');
+        const tableRows = document.querySelectorAll('#productsTable tbody tr');
+        searchInput.addEventListener('keyup', function() {
+            const term = this.value.toLowerCase();
+            tableRows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(term) ? '' : 'none';
+            });
+        });
+
+        // ProductsManager should handle edit button click and populate modal
+        window.productsManager = new ProductsManager();
+    });
+</script>
+{% endblock %}

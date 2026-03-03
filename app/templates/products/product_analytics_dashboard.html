@@ -1,0 +1,372 @@
+{% extends "_base.html" %}
+{% from "components/metrics_card.html" import metrics_card %}
+
+{% block title %}{{ product.name }} - Analytics Dashboard{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link href="{{ url_for('static', filename='css/tabs.css') }}" rel="stylesheet">
+<link href="{{ url_for('static', filename='css/product-analytics.css') }}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header -->
+<div class="analytics-header">
+    <div class="container-fluid">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-chart-line me-3"></i>
+                    {{ product.name }} Analytics Dashboard
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Real-time performance metrics and insights
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 justify-content-md-end align-items-center">
+                    <div class="realtime-indicator">
+                        Live Data
+                    </div>
+                    <button class="btn btn-light refresh-btn" title="Refresh Data">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                    <div class="dropdown period-selector">
+                        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+                            <i class="fas fa-calendar me-2"></i>
+                            <span id="currentPeriod">Last 30 Days</span>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" data-period="7">Last 7 Days</a></li>
+                            <li><a class="dropdown-item" href="#" data-period="30">Last 30 Days</a></li>
+                            <li><a class="dropdown-item" href="#" data-period="90">Last 90 Days</a></li>
+                            <li><a class="dropdown-item" href="#" data-period="365">Last Year</a></li>
+                        </ul>
+                    </div>
+                    <a href="{{ url_for('products.manage_products', product_id=product.id) }}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Product
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container-fluid">
+    <!-- Enhanced Summary Metrics -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="metrics-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Revenue</h6>
+                    <i class="fas fa-dollar-sign text-primary"></i>
+                </div>
+                <h3 class="mb-1" id="revenueMetric">${{ "%.2f"|format(metrics.revenue) }}</h3>
+                <div class="d-flex align-items-center">
+                    {% if metrics.revenue_growth > 0 %}
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        <span class="text-success">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
+                    {% else %}
+                        <i class="fas fa-arrow-down text-danger me-1"></i>
+                        <span class="text-danger">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
+                    {% endif %}
+                    <small class="text-muted ms-2">vs last period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="metrics-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Profit</h6>
+                    <i class="fas fa-chart-pie text-success"></i>
+                </div>
+                <h3 class="mb-1" id="profitMetric">${{ "%.2f"|format(metrics.net_profit) }}</h3>
+                <div class="d-flex align-items-center">
+                    {% if metrics.profit_growth > 0 %}
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        <span class="text-success">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
+                    {% else %}
+                        <i class="fas fa-arrow-down text-danger me-1"></i>
+                        <span class="text-danger">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
+                    {% endif %}
+                    <small class="text-muted ms-2">vs last period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="metrics-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Margin</h6>
+                    <i class="fas fa-percentage text-info"></i>
+                </div>
+                <h3 class="mb-1" id="marginMetric">{{ "%.1f"|format(metrics.net_margin) }}%</h3>
+                <div class="d-flex align-items-center">
+                    {% if metrics.margin_growth > 0 %}
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        <span class="text-success">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
+                    {% else %}
+                        <i class="fas fa-arrow-down text-danger me-1"></i>
+                        <span class="text-danger">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
+                    {% endif %}
+                    <small class="text-muted ms-2">vs last period</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="metrics-card">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <h6 class="text-muted mb-0">Units Sold</h6>
+                    <i class="fas fa-box text-warning"></i>
+                </div>
+                <h3 class="mb-1" id="unitsMetric">{{ metrics.units_sold|number_format(0) }}</h3>
+                <div class="d-flex align-items-center">
+                    {% if metrics.units_growth > 0 %}
+                        <i class="fas fa-arrow-up text-success me-1"></i>
+                        <span class="text-success">{{ "%.1f"|format(metrics.units_growth) }}%</span>
+                    {% else %}
+                        <i class="fas fa-arrow-down text-danger me-1"></i>
+                        <span class="text-danger">{{ "%.1f"|format(metrics.units_growth) }}%</span>
+                    {% endif %}
+                    <small class="text-muted ms-2">vs last period</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Enhanced Tab Navigation -->
+    <div class="card">
+        <div class="card-header p-0">
+            <ul class="nav nav-tabs card-header-tabs" id="analyticsTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
+                            data-bs-target="#overview" type="button" role="tab" aria-controls="overview" 
+                            aria-selected="true">
+                        <i class="fas fa-chart-line me-2"></i>Overview
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="lots-tab" data-bs-toggle="tab" 
+                            data-bs-target="#lots" type="button" role="tab" aria-controls="lots" 
+                            aria-selected="false">
+                        <i class="fas fa-boxes me-2"></i>Lot Analytics
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" 
+                            data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory" 
+                            aria-selected="false">
+                        <i class="fas fa-warehouse me-2"></i>Inventory
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="forecasts-tab" data-bs-toggle="tab" 
+                            data-bs-target="#forecasts" type="button" role="tab" aria-controls="forecasts" 
+                            aria-selected="false">
+                        <i class="fas fa-crystal-ball me-2"></i>Forecasts
+                    </button>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Tab Content -->
+        <div class="card-body">
+            <div class="tab-content" id="analyticsTabContent">
+                <!-- Overview Tab -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
+                    <div class="row">
+                        <div class="col-lg-8 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Revenue & Profit Trend</h5>
+                                    <div class="btn-group btn-group-sm chart-type-switcher">
+                                        <button class="btn btn-outline-primary active" data-chart="revenueTrend" data-type="line">Line</button>
+                                        <button class="btn btn-outline-primary" data-chart="revenueTrend" data-type="bar">Bar</button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="revenueTrend"></canvas>
+                                        <div class="loading-overlay d-none" id="revenueTrendLoading">
+                                            <div class="spinner-border text-primary" role="status">
+                                                <span class="visually-hidden">Loading...</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-4 mb-4">
+                            <div class="card h-100">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">Cost Breakdown</h5>
+                                    <button class="btn btn-sm btn-outline-primary export-btn" onclick="window.analyticsDashboard.exportCostData()">
+                                        <i class="fas fa-download"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="costBreakdown"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Additional Overview Charts -->
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Sales Performance</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container" style="height: 250px;">
+                                        <canvas id="salesPerformance"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Profit Margins</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container" style="height: 250px;">
+                                        <canvas id="profitMargins"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lot Analytics Tab -->
+                <div class="tab-pane fade" id="lots" role="tabpanel" aria-labelledby="lots-tab">
+                    {% include 'components/lot_analytics_table.html' %}
+                    
+                    <div class="row mt-4">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Lot Performance</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="lotPerformance"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Growth Metrics</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="growthMetrics"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Inventory Tab -->
+                <div class="tab-pane fade" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
+                    <div class="row">
+                        <div class="col-md-8 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Inventory Levels</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="inventoryLevels"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Stock Status</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="stockStatus"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Forecasts Tab -->
+                <div class="tab-pane fade" id="forecasts" role="tabpanel" aria-labelledby="forecasts-tab">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Revenue Forecast</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="revenueForecast"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-4">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5 class="mb-0">Demand Forecast</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="chart-container">
+                                        <canvas id="demandForecast"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="{{ url_for('static', filename='js/product-analytics.js') }}"></script>
+<script>
+// Initialize dashboard when DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+    window.analyticsDashboard = new ProductAnalyticsDashboard({{ product.id }});
+    window.analyticsDashboard.init();
+});
+
+// Setup chart type switchers
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.chart-type-switcher .btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const chartId = this.dataset.chart;
+            const chartType = this.dataset.type;
+            if (window.analyticsDashboard) {
+                window.analyticsDashboard.changeChartType(chartId, chartType);
+            }
+        });
+    });
+});
+
+// Cleanup on page unload
+window.addEventListener('beforeunload', function() {
+    if (window.analyticsDashboard) {
+        window.analyticsDashboard.destroy();
+    }
+});
+</script>
+{% endblock %}

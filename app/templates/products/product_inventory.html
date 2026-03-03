@@ -1,0 +1,332 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ product.name }} - Inventory{% endblock %}
+
+{% block head %}
+{{ super() }}
+<link href="{{ url_for('static', filename='css/product-inventory.css') }}" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header -->
+<div class="inventory-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-warehouse me-3"></i>
+                    {{ product.name }} Inventory Management
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Real-time inventory tracking and management
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <button class="btn btn-light" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Report
+                    </button>
+                    <a href="{{ url_for('products.inventory_dashboard') }}" class="btn btn-light">
+                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Enhanced Product Overview -->
+    <div class="product-overview-card">
+        <div class="row mb-4">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="inventory-metric">
+                    <span class="inventory-metric-value" id="currentStock">{{ product.current_stock }}</span>
+                    <span class="inventory-metric-label">Current Stock</span>
+                    <div class="inventory-metric-change {% if stock_change > 0 %}positive{% else %}negative{% endif %}">
+                        {{ stock_change_text }}
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="inventory-metric">
+                    <span class="inventory-metric-value" id="reorderLevel">{{ product.reorder_level }}</span>
+                    <span class="inventory-metric-label">Reorder Level</span>
+                    <div class="inventory-metric-change">
+                        {% set stock_percent = (product.current_stock / (product.reorder_level * 4) * 100) %}
+                        {{ [stock_percent, 100]|min|round|int }}% of capacity
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="inventory-metric">
+                    <span class="inventory-metric-value">${{ "%.2f"|format(product.cogs_per_unit) }}</span>
+                    <span class="inventory-metric-label">COGS/Unit</span>
+                    <div class="inventory-metric-change">
+                        Margin: {{ "%.1f"|format(product.margin_percentage) }}%
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="inventory-metric">
+                    <span class="inventory-metric-value">${{ "%.2f"|format(product.selling_price_per_unit) }}</span>
+                    <span class="inventory-metric-label">Selling Price</span>
+                    <div class="inventory-metric-change">
+                        ${{ "%.2f"|format(product.selling_price_per_unit - product.cogs_per_unit) }} profit
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stock Level Progress -->
+        <div class="row">
+            <div class="col-12">
+                <h5 class="mb-3">Stock Level Status</h5>
+                {% set stock_percentage = (product.current_stock / (product.reorder_level * 4) * 100) %}
+                {% set stock_status = 'critical' if product.current_stock <= product.reorder_level else ('warning' if product.current_stock <= product.reorder_level * 2 else 'success') %}
+
+                <div class="stock-progress">
+                    <div class="stock-progress-bar {{ stock_status }}" 
+                         style="width: {{ [stock_percentage, 100]|min }}%">
+                        {{ product.current_stock }} units
+                    </div>
+                    <div class="stock-status-indicator">
+                        {% if stock_status == 'critical' %}
+                            <i class="fas fa-exclamation-triangle text-white"></i>
+                        {% elif stock_status == 'warning' %}
+                            <i class="fas fa-exclamation-circle text-white"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle text-white"></i>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="row mt-3">
+                    <div class="col-md-3">
+                        <small class="text-muted">Reorder Level: <strong>{{ product.reorder_level }} units</strong></small>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Optimal Level: <strong>{{ product.reorder_level * 4 }} units</strong></small>
+                    </div>
+                    <div class="col-md-3">
+                        <small class="text-muted">Current Status: <strong class="text-{{ stock_status }}">{{ stock_status|title }}</strong></small>
+                    </div>
+                    <div class="col-md-3 text-end">
+                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editLevelsModal">
+                            <i class="fas fa-edit me-1"></i>Edit Levels
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stock Over Time Chart -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                Stock Level History (Last 30 Days)
+            </h5>
+        </div>
+        <div class="card-body">
+            <canvas id="stockChart" height="250"></canvas>
+        </div>
+    </div>
+
+    <!-- Inventory Movements Table -->
+    <div class="card">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-exchange-alt text-primary me-2"></i>
+                Inventory Movements
+            </h5>
+            <div class="d-flex gap-2">
+                <input type="text" id="movementSearch" class="form-control form-control-sm" placeholder="Search movements..." style="width: 200px;">
+                <select id="movementFilter" class="form-select form-select-sm" style="width: auto;">
+                    <option value="">All Types</option>
+                    <option value="stock_in">Stock In</option>
+                    <option value="stock_out">Stock Out</option>
+                    <option value="adjustment">Adjustment</option>
+                </select>
+                <button class="btn btn-primary btn-sm" onclick="inventoryManager.addMovement()">
+                    <i class="fas fa-plus me-1"></i>New Movement
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            {% if movements.items %}
+                <div class="table-responsive">
+                    <table class="table movement-table" id="movementsTable">
+                        <thead>
+                            <tr>
+                                <th>Date & Time</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                                <th>Unit Cost</th>
+                                <th>Total Value</th>
+                                <th>Notes</th>
+                                <th>User</th>
+                                <th class="text-end">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for movement in movements.items %}
+                            <tr data-movement-id="{{ movement.id }}" class="movement-row">
+                                <td>
+                                    <div class="d-flex flex-column">
+                                        <strong>{{ movement.created_at.strftime('%Y-%m-%d') }}</strong>
+                                        <small class="text-muted">{{ movement.created_at.strftime('%H:%M:%S') }}</small>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="movement-type-badge {% if movement.quantity_change > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                        {% if movement.quantity_change > 0 %}
+                                            <i class="fas fa-arrow-down me-1"></i>Stock In
+                                        {% else %}
+                                            <i class="fas fa-arrow-up me-1"></i>Stock Out
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td class="editable-cell" data-field="quantity">
+                                    <span class="editable-value">{{ movement.quantity_change|abs }}</span>
+                                    {% if current_user.can_edit_inventory %}
+                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'quantity')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                <td class="editable-cell" data-field="unit_cost">
+                                    <span class="editable-value">${{ "%.2f"|format(movement.unit_cost) }}</span>
+                                    {% if current_user.can_edit_inventory %}
+                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'unit_cost')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                <td>${{ "%.2f"|format(movement.quantity_change * movement.unit_cost) }}</td>
+                                <td class="editable-cell" data-field="notes" style="max-width: 200px;">
+                                    <span class="editable-value">{{ movement.notes or '-' }}</span>
+                                    {% if current_user.can_edit_inventory %}
+                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'notes')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <img src="{{ movement.user.avatar or url_for('static', filename='img/default-avatar.png') }}" 
+                                             alt="{{ movement.user.name }}" 
+                                             class="rounded-circle me-2" 
+                                             style="width: 24px; height: 24px; object-fit: cover;">
+                                        <strong>{{ movement.user.name }}</strong>
+                                    </div>
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <button class="btn btn-outline-primary" onclick="inventoryManager.viewDetails({{ movement.id }})" title="View Details">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                        {% if current_user.can_delete_inventory %}
+                                            <button class="btn btn-outline-danger" onclick="inventoryManager.deleteMovement({{ movement.id }})" title="Delete Movement">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pagination -->
+                <nav aria-label="Movements pagination" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-center">
+                        {% if movements.has_prev %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.prev_num) }}">Previous</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        {% endif %}
+
+                        {% for page_num in movements.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
+                            {% if page_num %}
+                                {% if page_num == movements.page %}
+                                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                {% else %}
+                                <li class="page-item"><a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=page_num) }}">{{ page_num }}</a></li>
+                                {% endif %}
+                            {% else %}
+                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if movements.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.next_num) }}">Next</a>
+                        </li>
+                        {% else %}
+                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            {% else %}
+                <div class="text-center py-5">
+                    <div class="text-muted">
+                        <i class="fas fa-exchange-alt fa-3x mb-3"></i>
+                        <h4>No Inventory Movements Found</h4>
+                        <p>Start tracking inventory movements for better stock management.</p>
+                        <button class="btn btn-primary" onclick="inventoryManager.addMovement()">
+                            <i class="fas fa-plus me-2"></i>Record First Movement
+                        </button>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Edit Levels Modal -->
+<div class="modal fade" id="editLevelsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Stock Levels</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editLevelsForm">
+                    <div class="mb-3">
+                        <label for="reorder_level" class="form-label">Reorder Level</label>
+                        <input type="number" class="form-control" id="reorder_level" value="{{ product.reorder_level }}">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="inventoryManager.saveLevels()">Save</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/product-inventory.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.inventoryManager = new ProductInventoryManager({
+        productId: {{ product.id }},
+        stockChartData: {{ stock_chart_data|tojson|safe }}
+    });
+    window.inventoryManager.init();
+});
+</script>
+{% endblock %}

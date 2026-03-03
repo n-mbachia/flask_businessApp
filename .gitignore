@@ -1,0 +1,107 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Virtual environments
+.venv
+venv/
+ENV/
+env/
+.env
+.env.*
+!.env.example
+
+# ============================================
+# Database
+# ============================================
+*.db
+*.db-wal
+*.db-shm
+*.db-journal
+*.sqlite3
+*.sqlite3-journal
+
+# ============================================
+# Logs
+# ============================================
+logs/
+*.log
+
+# ============================================
+# Testing & Coverage
+# ============================================
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# ============================================
+# IDEs / Editors
+# ============================================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# ============================================
+# Build & Dependencies
+# ============================================
+node_modules/
+*.min.js
+*.min.css
+*.map
+build/
+dist/
+*.egg-info/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg
+.installed.cfg
+
+# ============================================
+# Project specific
+# ============================================
+instance/
+.local/
+*.local
+/app/static/dist/
+!/app/static/dist/.gitkeep
+
+# ============================================
+# Caches & temporary files
+# ============================================
+.cache/
+.sass-cache/
+.webassets-cache
+celerybeat-schedule
+celerybeat.pid
+
+# ============================================
+# Type checkers / linters
+# ============================================
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.pyre/
+.pytype/
+
+# ============================================
+# Jupyter Notebooks
+# ============================================
+.ipynb_checkpoints/

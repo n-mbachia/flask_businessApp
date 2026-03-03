@@ -1,0 +1,7 @@
+<div class="alert alert-info py-2">
+  <strong>Price:</strong> ${{ "%.2f"|format(product.price or 0) }}<br>
+  <strong>Stock:</strong> {{ product.current_stock or 0 }} units
+  {% if product.current_stock <= 5 %}
+  <br><small class="text-warning">⚠️ Low stock!</small>
+  {% endif %}
+</div>

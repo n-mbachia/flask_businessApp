@@ -1,0 +1,478 @@
+{% extends "_base.html" %}
+{% block title %}{{ product.name }} Lot Analytics{% endblock %}
+
+{% block head %}
+<style>
+.lot-analytics-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.product-info-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.product-metric {
+    text-align: center;
+    padding: 1rem;
+    border-radius: 8px;
+    background: #f8f9fa;
+    transition: transform 0.2s ease;
+}
+
+.product-metric:hover {
+    transform: translateY(-2px);
+}
+
+.product-metric-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+
+.product-metric-label {
+    font-size: 0.875rem;
+    color: #6c757d;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.growth-analysis-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    padding: 1.5rem;
+}
+
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 2rem;
+}
+
+.growth-table {
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.growth-table th {
+    background: #f8f9fa;
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.5px;
+}
+
+.growth-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.growth-indicator.positive {
+    background: #d4edda;
+    color: #155724;
+}
+
+.growth-indicator.negative {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+@media (max-width: 768px) {
+    .lot-analytics-header {
+        padding: 1rem 0;
+    }
+    
+    .product-metric {
+        margin-bottom: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Enhanced Header -->
+<div class="lot-analytics-header">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="mb-2">
+                    <i class="fas fa-boxes me-3"></i>
+                    {{ product.name }} Lot Analytics
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Comprehensive performance analysis for {{ lots|length }} lot(s)
+                </p>
+            </div>
+            <div class="col-md-4 text-md-end">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <button class="btn btn-light" onclick="window.print()">
+                        <i class="fas fa-print me-2"></i>Print Report
+                    </button>
+                    <button class="btn btn-light" onclick="exportFullReport()">
+                        <i class="fas fa-download me-2"></i>Export
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <!-- Product Overview Card -->
+    <div class="product-info-card">
+        <div class="row">
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="product-metric">
+                    <div class="product-metric-value">{{ product.sku }}</div>
+                    <div class="product-metric-label">SKU</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="product-metric">
+                    <div class="product-metric-value">{{ product.current_stock|number_format(0) }}</div>
+                    <div class="product-metric-label">Current Stock</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="product-metric">
+                    <div class="product-metric-value">{{ "%.1f"|format(product.margin_threshold) }}%</div>
+                    <div class="product-metric-label">Margin Threshold</div>
+                </div>
+            </div>
+            <div class="col-md-3 col-sm-6 mb-3">
+                <div class="product-metric">
+                    <div class="product-metric-value">${{ product.price|number_format(2) }}</div>
+                    <div class="product-metric-label">Unit Price</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enhanced Lot Analytics Table -->
+    {% include 'components/lot_analytics_table.html' %}
+    
+    <!-- Growth Analysis Section -->
+    {% if growth_metrics %}
+    <div class="growth-analysis-card mt-4">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h4 class="mb-0">
+                <i class="fas fa-chart-line text-primary me-2"></i>
+                Lot-to-Lot Growth Analysis
+            </h4>
+            <div class="btn-group btn-group-sm">
+                <button class="btn btn-outline-primary active" onclick="showGrowthChart()">
+                    <i class="fas fa-chart-bar"></i> Chart
+                </button>
+                <button class="btn btn-outline-primary" onclick="showGrowthTable()">
+                    <i class="fas fa-table"></i> Table
+                </button>
+            </div>
+        </div>
+        
+        <!-- Chart View -->
+        <div id="growthChartView" class="chart-container">
+            <canvas id="growthChart"></canvas>
+        </div>
+        
+        <!-- Table View -->
+        <div id="growthTableView" class="table-responsive" style="display: none;">
+            <table class="table growth-table">
+                <thead>
+                    <tr>
+                        <th>Comparison</th>
+                        <th>Revenue Growth</th>
+                        <th>Velocity Growth</th>
+                        <th>Margin Change</th>
+                        <th>Performance Rating</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for growth in growth_metrics %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-medium">{{ growth['from_lot'] }}</span>
+                                <i class="fas fa-arrow-right mx-2 text-muted"></i>
+                                <span class="fw-medium">{{ growth['to_lot'] }}</span>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="growth-indicator {{ 'positive' if growth['revenue_growth'] > 0 else 'negative' }}">
+                                <i class="fas fa-arrow-{{ 'up' if growth['revenue_growth'] > 0 else 'down' }}"></i>
+                                {{ "%.1f"|format(growth['revenue_growth']) }}%
+                            </div>
+                        </td>
+                        <td>
+                            <div class="growth-indicator {{ 'positive' if growth['velocity_growth'] > 0 else 'negative' }}">
+                                <i class="fas fa-arrow-{{ 'up' if growth['velocity_growth'] > 0 else 'down' }}"></i>
+                                {{ "%.1f"|format(growth['velocity_growth']) }}%
+                            </div>
+                        </td>
+                        <td>
+                            <div class="growth-indicator {{ 'positive' if growth['margin_change'] > 0 else 'negative' }}">
+                                <i class="fas fa-arrow-{{ 'up' if growth['margin_change'] > 0 else 'down' }}"></i>
+                                {{ "%+.1f"|format(growth['margin_change']) }}pp
+                            </div>
+                        </td>
+                        <td>
+                            {% set overall_score = (growth['revenue_growth'] + growth['velocity_growth'] + (growth['margin_change'] * 10)) / 3 %}
+                            {% if overall_score > 10 %}
+                                <span class="badge bg-success">Excellent</span>
+                            {% elif overall_score > 5 %}
+                                <span class="badge bg-info">Good</span>
+                            {% elif overall_score > 0 %}
+                                <span class="badge bg-warning">Fair</span>
+                            {% else %}
+                                <span class="badge bg-danger">Poor</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <!-- No Growth Data Message -->
+    <div class="text-center py-5">
+        <div class="text-muted">
+            <i class="fas fa-chart-line fa-3x mb-3"></i>
+            <h4>Insufficient Data for Growth Analysis</h4>
+            <p>Multiple lots with historical data are needed to generate growth comparisons.</p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    {% if growth_metrics %}
+    initializeGrowthChart();
+    {% endif %}
+    
+    // Initialize tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+
+{% if growth_metrics %}
+function initializeGrowthChart() {
+    const ctx = document.getElementById('growthChart').getContext('2d');
+    
+    const growthData = {
+        labels: {{ growth_metrics|map(attribute='to_lot')|tojson }},
+        datasets: [
+            {
+                label: 'Revenue Growth %',
+                data: {{ growth_metrics|map(attribute='revenue_growth')|tojson }},
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 2,
+                borderRadius: 6,
+                barPercentage: 0.8
+            },
+            {
+                label: 'Velocity Growth %',
+                data: {{ growth_metrics|map(attribute='velocity_growth')|tojson }},
+                backgroundColor: 'rgba(255, 206, 86, 0.6)',
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 2,
+                borderRadius: 6,
+                barPercentage: 0.8
+            }
+        ]
+    };
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: growthData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        usePointStyle: true,
+                        padding: 20
+                    }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                    titleColor: '#fff',
+                    bodyColor: '#fff',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1,
+                    padding: 12,
+                    displayColors: true,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            if (context.parsed.y !== null) {
+                                label += context.parsed.y.toFixed(1) + '%';
+                            }
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    },
+                    ticks: {
+                        font: {
+                            weight: 600
+                        }
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        },
+                        font: {
+                            weight: 600
+                        }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Growth Percentage',
+                        font: {
+                            weight: 600,
+                            size: 14
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function showGrowthChart() {
+    document.getElementById('growthChartView').style.display = 'block';
+    document.getElementById('growthTableView').style.display = 'none';
+    
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+function showGrowthTable() {
+    document.getElementById('growthChartView').style.display = 'none';
+    document.getElementById('growthTableView').style.display = 'block';
+    
+    // Update button states
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+{% endif %}
+
+function exportFullReport() {
+    // Create comprehensive report data
+    const reportData = {
+        product: {
+            name: "{{ product.name }}",
+            sku: "{{ product.sku }}",
+            current_stock: {{ product.current_stock }},
+            margin_threshold: {{ product.margin_threshold }},
+            unit_price: {{ product.price }}
+        },
+        lots: {{ lots|tojson }},
+        growth_metrics: {{ growth_metrics|tojson if growth_metrics else '[]' }},
+        export_date: new Date().toISOString()
+    };
+    
+    // Convert to CSV
+    const csvContent = generateReportCSV(reportData);
+    downloadCSV(csvContent, `{{ product.name|replace(' ', '_') }}_lot_analytics.csv`);
+}
+
+function generateReportCSV(data) {
+    let csv = 'Product Lot Analytics Report\n';
+    csv += `Generated: ${new Date().toLocaleString()}\n\n`;
+    
+    // Product Info
+    csv += 'Product Information\n';
+    csv += `Name,${data.product.name}\n`;
+    csv += `SKU,${data.product.sku}\n`;
+    csv += `Current Stock,${data.product.current_stock}\n`;
+    csv += `Margin Threshold,${data.product.margin_threshold}%\n`;
+    csv += `Unit Price,$${data.product.unit_price}\n\n`;
+    
+    // Lots Data
+    csv += 'Lot Performance Data\n';
+    csv += 'Lot #,Received Date,Units,Sold,Sell-Through %,Revenue,Margin %,Velocity,Status\n';
+    
+    data.lots.forEach(lot => {
+        csv += `"${lot.lot_number}",`;
+        csv += `${lot.received_date},`;
+        csv += `${lot.quantity_received},`;
+        csv += `${lot.total_units_sold},`;
+        csv += `${lot.sell_through_rate}%,`;
+        csv += `$${lot.total_revenue},`;
+        csv += `${lot.gross_margin}%,`;
+        csv += `${lot.velocity.velocity}/day,`;
+        csv += `${lot.expiration_status}\n`;
+    });
+    
+    // Growth Metrics
+    if (data.growth_metrics.length > 0) {
+        csv += '\nGrowth Analysis\n';
+        csv += 'From Lot,To Lot,Revenue Growth %,Velocity Growth %,Margin Change (pp)\n';
+        
+        data.growth_metrics.forEach(growth => {
+            csv += `${growth.from_lot},${growth.to_lot},`;
+            csv += `${growth.revenue_growth}%,`;
+            csv += `${growth.velocity_growth}%,`;
+            csv += `${growth.margin_change}\n`;
+        });
+    }
+    
+    return csv;
+}
+
+function downloadCSV(content, filename) {
+    const blob = new Blob([content], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+</script>
+{% endblock %}

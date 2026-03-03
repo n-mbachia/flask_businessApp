@@ -1,0 +1,170 @@
+{# -------------------------------------------------------------------
+   metrics_card(title,
+                value,
+                comparison_value=None,
+                comparison_label=None,
+                positive_is_good=True,
+                value_format=None,
+                icon=None,
+                color_variant='primary',
+                size='medium',
+                clickable=False,
+                actions=None,
+                loading=False)
+
+   Enhanced reusable metrics card with modern design, accessibility,
+   and interactive features.
+
+   Parameters
+   ----------
+   title             – heading text
+   value             – primary metric (number or string)
+   comparison_value  – numeric change to display beneath the value
+   comparison_label  – text to append to the delta, e.g. "vs last wk"
+   positive_is_good  – if True an upward delta is styled as positive
+   value_format      – one of 'currency', 'percent', a string
+                        beginning with '$' (prefix shown before value),
+                        or None for raw output.
+   icon              – Font Awesome icon class (e.g., 'fas fa-chart-line')
+   color_variant     – 'primary', 'success', 'warning', 'danger', 'info'
+   size              – 'small', 'medium', 'large'
+   clickable         – Whether card is clickable
+   actions           – List of action buttons: ['refresh', 'export', 'share', 'details']
+   loading           – Show loading state
+#}
+{% macro metrics_card(title,
+                      value,
+                      comparison_value=None,
+                      comparison_label=None,
+                      positive_is_good=True,
+                      value_format=None,
+                      icon=None,
+                      color_variant='primary',
+                      size='medium',
+                      clickable=False,
+                      actions=None,
+                      loading=False) %}
+    {# helper for formatting the main value #}
+    {% macro _fmt(val, fmt) %}
+        {% if val is none %}
+            &ndash;
+        {% elif fmt == 'currency' %}
+            ${{ "{:,.2f}".format(val) }}
+        {% elif fmt == 'percent' %}
+            {{ "{:.1f}%".format(val) }}
+        {% elif fmt == 'number' %}
+            {{ "{:,}".format(val) }}
+        {% elif fmt and fmt.startswith('$') %}
+            {{ fmt[1:] }}${{ "{:,.2f}".format(val) }}
+        {% else %}
+            {{ val }}
+        {% endif %}
+    {% endmacro %}
+
+    {# Helper for icon HTML #}
+    {% macro _render_icon(icon_class) %}
+        {% if icon_class %}
+            <div class="metrics-card-icon">
+                <i class="{{ icon_class }}" aria-hidden="true"></i>
+            </div>
+        {% endif %}
+    {% endmacro %}
+
+    {# Helper for comparison indicator #}
+    {% macro _render_comparison(comp_value, comp_label, pos_is_good) %}
+        {% if comp_value is not none and comp_label %}
+            {% set positive = comp_value >= 0 %}
+            {% set good = positive if pos_is_good else not positive %}
+            {% set trend_class = 'up' if positive else 'down' %}
+            {% set status_class = 'positive' if good else ('negative' if not good else 'neutral') %}
+            
+            <div class="metrics-card-comparison {{ status_class }}" 
+                 role="status" 
+                 aria-label="{{ comp_value|abs|round(1) }}% {{ comp_label }} ({{ 'increased' if positive else 'decreased' }})">
+                <span class="comparison-trend {{ trend_class }}" aria-hidden="true">
+                    <i class="fas fa-arrow-{{ trend_class }}"></i>
+                </span>
+                <span>{{ "%+.1f"|format(comp_value) }}% {{ comp_label }}</span>
+            </div>
+        {% endif %}
+    {% endmacro %}
+
+    {# Helper for action buttons #}
+    {% macro _render_actions(action_list) %}
+        {% if action_list %}
+            <div class="metrics-card-actions">
+                {% for action in action_list %}
+                    {% if action == 'refresh' %}
+                        <button class="metrics-card-action" 
+                                data-action="refresh" 
+                                title="Refresh data"
+                                aria-label="Refresh metric data">
+                            <i class="fas fa-sync-alt"></i>
+                        </button>
+                    {% elif action == 'export' %}
+                        <button class="metrics-card-action" 
+                                data-action="export" 
+                                title="Export data"
+                                aria-label="Export metric data">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    {% elif action == 'share' %}
+                        <button class="metrics-card-action" 
+                                data-action="share" 
+                                title="Share data"
+                                aria-label="Share metric data">
+                            <i class="fas fa-share-alt"></i>
+                        </button>
+                    {% elif action == 'details' %}
+                        <button class="metrics-card-action" 
+                                data-action="details" 
+                                title="View details"
+                                aria-label="View metric details">
+                            <i class="fas fa-chart-bar"></i>
+                        </button>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endmacro %}
+
+    {# Build CSS classes #}
+    {% set card_classes = [
+        'metrics-card-container',
+        'metrics-card-' + color_variant,
+        'metrics-card-' + size,
+        'metrics-card-clickable' if clickable else '',
+        'metrics-card-loading' if loading else ''
+    ]|join(' ')|trim %}
+
+    {# Generate the card HTML #}
+    <div class="{{ card_classes }}" 
+         {% if clickable %}tabindex="0" role="button"{% endif %}
+         data-clickable="{{ clickable|lower }}"
+         {% if loading %}aria-busy="true"{% endif %}>
+        
+        <div class="metrics-card-header">
+            <h4 class="metrics-card-title">{{ title }}</h4>
+            {{ _render_icon(icon) }}
+        </div>
+
+        <div class="metrics-card-value" 
+             {% if loading %}aria-label="Loading..."{% endif %}
+             role="status">
+            {{ _fmt(value, value_format) }}
+        </div>
+
+        {{ _render_comparison(comparison_value, comparison_label, positive_is_good) }}
+
+        {% if actions %}
+            <div class="metrics-card-footer">
+                <div class="metrics-card-meta">
+                    <small class="text-muted">
+                        Last updated: <time datetime="{{ moment().format('YYYY-MM-DDTHH:mm:ss') }}">{{ moment().format('MMM DD, YYYY') }}</time>
+                    </small>
+                </div>
+                {{ _render_actions(actions) }}
+            </div>
+        {% endif %}
+    </div>
+{% endmacro %}

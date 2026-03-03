@@ -1,0 +1,45 @@
+.timeline {
+    position: relative;
+    padding-left: 1.5rem;
+}
+.timeline:before {
+    content: '';
+    position: absolute;
+    left: 0.5rem;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background-color: #e9ecef;
+}
+.timeline-item {
+    position: relative;
+    padding-bottom: 1.5rem;
+}
+.timeline-item:last-child {
+    padding-bottom: 0;
+}
+.timeline-item-marker {
+    position: absolute;
+    left: -1.5rem;
+    top: 0.25rem;
+}
+.timeline-item-marker-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border-radius: 50%;
+    color: white;
+    font-size: 0.75rem;
+}
+.timeline-item-content {
+    padding-left: 1rem;
+}
+/* Print styles */
+@media print {
+    .no-print { display: none !important; }
+    body { background: white; }
+    .card { border: none; box-shadow: none; }
+    .modal { position: absolute; left: 0; top: 0; }
+}

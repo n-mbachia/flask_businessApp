@@ -1,0 +1,23 @@
+{% extends "errors/base_error.html" %}
+
+{% block title %}500 - Internal Server Error{% endblock %}
+
+{% block content %}
+    <div class="error-container">
+        <div class="error-content">
+            <div class="error-code">500</div>
+            <h1 class="error-message">Internal Server Error</h1>
+            <p class="lead">Something went wrong on our end. We're working to fix it.</p>
+            <p class="text-muted">Please try again later or contact support if the problem persists.</p>
+            <a href="{{ url_for('main.index') }}" class="btn btn-home">
+                Return to Homepage
+            </a>
+            {% if config.get('DEBUG') %}
+                <div class="alert alert-warning mt-3">
+                    <h5>Error Details:</h5>
+                    <pre>{{ error }}</pre>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}

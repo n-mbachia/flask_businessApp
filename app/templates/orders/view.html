@@ -1,0 +1,345 @@
+{% extends 'orders/base.html' %}
+
+{% block header_title %}Order #{{ '%06d' % order.id }}{% endblock %}
+
+{% block header_actions %}
+<div class="d-flex gap-2">
+    <a href="{{ url_for('orders.index') }}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Back to Orders
+    </a>
+    <a href="{{ url_for('orders.edit', id=order.id) }}" class="btn btn-outline-primary {% if order.status in ['completed', 'cancelled'] %}disabled{% endif %}">
+        <i class="fas fa-edit me-1"></i> Edit Order
+    </a>
+    <div class="dropdown">
+        <button class="btn btn-primary dropdown-toggle" type="button" id="orderActionsDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="fas fa-cog me-1"></i> Actions
+        </button>
+        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="orderActionsDropdown">
+            <li>
+                <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#printOrderModal">
+                    <i class="fas fa-print fa-fw me-2"></i> Print Order
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item {% if order.status == 'completed' %}disabled{% endif %}" 
+                   href="#" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#completeOrderModal"
+                   data-status="completed">
+                    <i class="fas fa-check-circle fa-fw me-2 text-success"></i> Mark as Completed
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item {% if order.status == 'cancelled' %}disabled{% endif %}" 
+                   href="#" 
+                   data-bs-toggle="modal" 
+                   data-bs-target="#cancelOrderModal"
+                   data-status="cancelled">
+                    <i class="fas fa-times-circle fa-fw me-2 text-danger"></i> Cancel Order
+                </a>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+                <a class="dropdown-item text-danger" href="#" data-bs-toggle="modal" data-bs-target="#deleteOrderModal">
+                    <i class="fas fa-trash-alt fa-fw me-2"></i> Delete Order
+                </a>
+            </li>
+        </ul>
+    </div>
+</div>
+{% endblock %}
+
+{% block order_content %}
+{% set order_subtotal = order.subtotal if order.subtotal is not none else order.items|sum(attribute='subtotal') %}
+{% set order_discount = order.discount_amount|default(0) %}
+{% set order_shipping = order.shipping_amount|default(0) %}
+{% set order_tax = order.tax_amount|default(0) %}
+{% set order_total = order.total_amount|default(order_subtotal) %}
+{% include 'orders/_modals.html' %}
+
+<div class="row">
+    <!-- Order Details -->
+    <div class="col-lg-8">
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Order Details</h5>
+                <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'processing' else 'danger' if order.status == 'cancelled' else 'info' }}">
+                    {{ order.status|title }}
+                </span>
+            </div>
+            <div class="card-body">
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <h6>Order Information</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-5">Order Number:</dt>
+                            <dd class="col-sm-7">#{{ '%06d' % order.id }}</dd>
+                            
+                            <dt class="col-sm-5">Order Date:</dt>
+                            <dd class="col-sm-7">
+                                <time datetime="{{ order.order_date.isoformat() if order.order_date else '' }}">
+                                    {{ order.order_date.strftime('%B %d, %Y %I:%M %p') if order.order_date else 'N/A' }}
+                                </time>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Payment Status:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'warning' if order.payment_status == 'pending' else 'secondary' }}">
+                                    {{ order.payment_status|title }}
+                                </span>
+                            </dd>
+                            
+                            <dt class="col-sm-5">Payment Method:</dt>
+                            <dd class="col-sm-7">{{ order.payment_method or 'N/A' }}</dd>
+                            
+                            <dt class="col-sm-5">Order Notes:</dt>
+                            <dd class="col-sm-7">{{ order.notes or 'No notes' }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Customer Information</h6>
+                        <dl class="row mb-0">
+                            <dt class="col-sm-4">Name:</dt>
+                            <dd class="col-sm-8">
+                                {% if order.customer %}
+                                    <a href="{{ url_for('customer.view', id=order.customer.id) }}">
+                                        {{ order.customer.name }}
+                                    </a>
+                                {% else %}
+                                    Guest
+                                {% endif %}
+                            </dd>
+                            
+                            {% if order.customer %}
+                            <dt class="col-sm-4">Email:</dt>
+                            <dd class="col-sm-8">
+                                <a href="mailto:{{ order.customer.email }}">{{ order.customer.email }}</a>
+                            </dd>
+                            
+                            <dt class="col-sm-4">Phone:</dt>
+                            <dd class="col-sm-8">{{ order.customer.phone or 'N/A' }}</dd>
+                            
+                            <dt class="col-sm-4">Address:</dt>
+                            <dd class="col-sm-8">
+                                {% if order.customer.address %}
+                                    {{ order.customer.address }}{% if order.customer.address2 %}, {{ order.customer.address2 }}{% endif %}<br>
+                                    {{ order.customer.city }}, {{ order.customer.state }} {{ order.customer.postal_code }}<br>
+                                    {{ order.customer.country }}
+                                {% else %}
+                                    No address provided
+                                {% endif %}
+                            </dd>
+                            {% endif %}
+                        </dl>
+                    </div>
+                </div>
+                
+                <!-- Order Items -->
+                <div class="table-responsive">
+                    <table class="table order-items-table">
+                        <thead>
+                            <tr>
+                                <th>Product</th>
+                                <th>Price</th>
+                                <th>Quantity</th>
+                                <th class="text-end">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in order.items %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-3">
+                                            {% if item.product and item.product.image %}
+                                            <img src="{{ url_for('static', filename=item.product.image) }}" 
+                                                 alt="{{ item.product.name }}" 
+                                                 class="img-fluid rounded" 
+                                                 style="width: 50px; height: 50px; object-fit: cover;">
+                                            {% else %}
+                                            <div class="bg-light d-flex align-items-center justify-content-center rounded" 
+                                                 style="width: 50px; height: 50px;">
+                                                <i class="fas fa-box text-muted"></i>
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                        <div>
+                                            <div class="fw-medium">
+                                                {% if item.product %}
+                                                    {{ item.product.name }}
+                                                {% else %}
+                                                    {{ item.product_name or 'Product Unavailable' }}
+                                                {% endif %}
+                                            </div>
+                                            <div class="text-muted small">
+                                                {% if item.product %}
+                                                    SKU: {{ item.product.sku or 'N/A' }}
+                                                {% else %}
+                                                    SKU: N/A
+                                                {% endif %}
+                                            </div>
+                                            {% if item.notes %}
+                                            <div class="small text-muted mt-1">
+                                                <i class="fas fa-sticky-note me-1"></i> {{ item.notes }}
+                                            </div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="currency">{{ item.unit_price }}</td>
+                                <td>{{ item.quantity }}</td>
+                                <td class="text-end currency">{{ item.unit_price * item.quantity }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Notes -->
+        {% if order.notes %}
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Order Notes</h5>
+            </div>
+            <div class="card-body">
+                {{ order.notes|nl2br }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Order Summary -->
+    <div class="col-lg-4">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Order Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="order-summary">
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Subtotal:</span>
+                        <span class="currency">{{ order_subtotal }}</span>
+                    </div>
+                    
+                    {% if order_discount > 0 %}
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Discount:</span>
+                        <span class="text-danger">-<span class="currency">{{ order_discount }}</span></span>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Shipping:</span>
+                        <span class="currency">{{ order_shipping }}</span>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Tax:</span>
+                        <span class="currency">{{ order_tax }}</span>
+                    </div>
+                    
+                    <hr>
+                    <div class="d-flex justify-content-between fw-bold">
+                        <span>Total:</span>
+                        <span class="currency">{{ order_total }}</span>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Payment Information</h6>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Payment Status:</dt>
+                        <dd class="col-sm-7">
+                            <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'warning' if order.payment_status == 'pending' else 'secondary' }}">
+                                {{ order.payment_status|title }}
+                            </span>
+                        </dd>
+                        
+                        <dt class="col-sm-5">Payment Method:</dt>
+                        <dd class="col-sm-7">{{ order.payment_method or 'N/A' }}</dd>
+                        
+                        {% if order.payment_date %}
+                        <dt class="col-sm-5">Payment Date:</dt>
+                        <dd class="col-sm-7">
+                            <time datetime="{{ order.payment_date.isoformat() }}">
+                                {{ order.payment_date.strftime('%B %d, %Y %I:%M %p') }}
+                            </time>
+                        </dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                
+                <div class="mt-4">
+                    <h6>Shipping Information</h6>
+                    <dl class="row mb-0">
+                        <dt class="col-sm-5">Shipping Method:</dt>
+                        <dd class="col-sm-7">{{ order.shipping_method or 'Standard Shipping' }}</dd>
+                        
+                        <dt class="col-sm-5">Tracking Number:</dt>
+                        <dd class="col-sm-7">
+                            {% if order.tracking_number %}
+                                {% if order.tracking_url %}
+                                    <a href="{{ order.tracking_url }}" target="_blank">
+                                        {{ order.tracking_number }}
+                                    </a>
+                                {% else %}
+                                    {{ order.tracking_number }}
+                                {% endif %}
+                            {% else %}
+                                N/A
+                            {% endif %}
+                        </dd>
+                    </dl>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Order Timeline -->
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Order Timeline</h5>
+            </div>
+            <div class="card-body">
+                <div class="timeline">
+                    <!-- (same timeline structure, but using proper semantic classes) -->
+                    <div class="timeline-item">
+                        <div class="timeline-item-marker">
+                            <div class="timeline-item-marker-indicator bg-primary">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                        <div class="timeline-item-content">
+                            <div class="d-flex justify-content-between">
+                                <h6>Order Placed</h6>
+                                <small class="text-muted">
+                                    <time datetime="{{ order.created_at.isoformat() }}">
+                                        {{ order.created_at.strftime('%b %d, %Y %I:%M %p') }}
+                                    </time>
+                                </small>
+                            </div>
+                            <p class="mb-0 small">Order was placed by {{ order.user.name or 'System' }}</p>
+                        </div>
+                    </div>
+                    <!-- ... other timeline items ... -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modals (unchanged structure, but moved to separate include if desired) -->
+{% include 'orders/_modals.html' %}
+{% endblock %}
+
+{% block styles %}
+{{ super() }}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/orders-view.css') }}">
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/pages/orders/view.js') }}"></script>
+{% endblock %}

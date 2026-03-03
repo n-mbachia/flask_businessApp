@@ -1,0 +1,87 @@
+{% extends "_base.html" %}
+
+{% block title %}Vendor Portal{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <header class="mb-4">
+        <div class="d-flex align-items-center justify-content-between">
+            <div>
+                <h1 class="h3 mb-0">Vendor Portal</h1>
+                <p class="text-muted">Upload new products for the approved storefront.</p>
+            </div>
+            <div>
+                <span class="badge bg-success">{{ 'Vendor' if current_user.is_vendor else 'User' }}</span>
+            </div>
+        </div>
+    </header>
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm border-0">
+                <div class="card-header">
+                    <h2 class="h6 mb-0">Submit a Product</h2>
+                </div>
+                <div class="card-body">
+                    <form method="POST" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+                        {% for field in [form.name, form.description, form.category, form.cogs_per_unit, form.selling_price_per_unit, form.reorder_level, form.initial_quantity, form.sku, form.barcode] %}
+                        <div class="mb-3">
+                            {{ field.label(class="form-label fw-semibold") }}
+                            {{ field(class="form-control" + (' is-invalid' if field.errors else '')) }}
+                            {% if field.errors %}
+                                <div class="invalid-feedback">
+                                    {{ field.errors[0] }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% endfor %}
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="vendor_image">Product Image</label>
+                            <input type="file" class="form-control" id="vendor_image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
+                            <small class="form-text text-muted">Optional image that appears in the storefront catalog.</small>
+                        </div>
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-7">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header">
+                    <h2 class="h6 mb-0">Your Products</h2>
+                </div>
+                <div class="card-body">
+                    {% if products %}
+                        <div class="list-group">
+                        {% for product in products %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-start gap-3">
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="rounded" style="width: 64px; height: 64px; object-fit: cover;">
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center mb-1">
+                                        <h3 class="h6 mb-0">{{ product.name }}</h3>
+                                        <span class="badge {% if product.is_approved %}bg-success{% else %}bg-warning text-dark{% endif %}">
+                                            {% if product.is_approved %}Approved{% else %}Pending{% endif %}
+                                        </span>
+                                    </div>
+                                    <p class="text-muted mb-1">{{ product.category }} • ${{ "%0.2f"|format(product.selling_price_per_unit) }}</p>
+                                    <small class="text-muted">
+                                        {{ product.description|default('No details provided.') }}
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">You have not submitted any storefront products yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

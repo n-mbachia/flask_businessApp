@@ -1,0 +1,251 @@
+{% extends "_base.html" %}
+
+{% block title %}{{ customer.name }} - Customer Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <!-- Header with breadcrumb and actions -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <div>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-1">
+                    <li class="breadcrumb-item"><a href="{{ url_for('customer.index') }}">Customers</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">{{ customer.name }}</li>
+                </ol>
+            </nav>
+            <h1 class="h3 mb-0">{{ customer.name }}</h1>
+        </div>
+        <div class="mt-2 mt-sm-0">
+            <a href="{{ url_for('customer.edit', id=customer.id) }}" class="btn btn-outline-primary me-2" data-bs-toggle="tooltip" title="Edit customer">
+                <i class="fas fa-edit me-1"></i> Edit
+            </a>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal" data-bs-toggle="tooltip" title="Delete customer">
+                <i class="fas fa-trash me-1"></i> Delete
+            </button>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Customer Information Card -->
+        <div class="col-lg-4 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-user-circle me-2 text-primary"></i>Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 text-muted">Name</dt>
+                        <dd class="col-sm-8">{{ customer.name }}</dd>
+
+                        {% if customer.company %}
+                        <dt class="col-sm-4 text-muted">Company</dt>
+                        <dd class="col-sm-8">{{ customer.company }}</dd>
+                        {% endif %}
+
+                        <dt class="col-sm-4 text-muted">Email</dt>
+                        <dd class="col-sm-8">
+                            {% if customer.email %}
+                                <a href="mailto:{{ customer.email }}">{{ customer.email }}</a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 text-muted">Phone</dt>
+                        <dd class="col-sm-8">
+                            {% if customer.phone %}
+                                <a href="tel:{{ customer.phone }}">{{ customer.phone }}</a>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 text-muted">Address</dt>
+                        <dd class="col-sm-8">
+                            {% if customer.address %}
+                                {{ customer.address }}<br>
+                                {% if customer.address2 %}{{ customer.address2 }}<br>{% endif %}
+                                {{ customer.city }}{% if customer.city and customer.state %}, {% endif %}
+                                {{ customer.state }} {{ customer.postal_code }}<br>
+                                {{ customer.country }}
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-4 text-muted">Status</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge bg-{{ 'success' if customer.is_active else 'secondary' }}">
+                                {{ 'Active' if customer.is_active else 'Inactive' }}
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4 text-muted">Customer Since</dt>
+                        <dd class="col-sm-8">{{ customer.created_at.strftime('%B %d, %Y') if customer.created_at else 'N/A' }}</dd>
+
+                        {% if customer.tax_id %}
+                        <dt class="col-sm-4 text-muted">Tax ID</dt>
+                        <dd class="col-sm-8">{{ customer.tax_id }}</dd>
+                        {% endif %}
+                    </dl>
+                </div>
+                <div class="card-footer bg-white text-muted small">
+                    {% if customer.updated_at %}
+                        Last updated {{ customer.updated_at.strftime('%b %d, %Y') }}
+                    {% else %}
+                        Created {{ customer.created_at.strftime('%b %d, %Y') if customer.created_at }}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics and Orders -->
+        <div class="col-lg-8 mb-4">
+            <!-- Statistics Row -->
+            <div class="row g-3 mb-4">
+                <div class="col-md-3 col-6">
+                    <div class="card bg-primary bg-opacity-10 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="display-6 fw-bold">{{ customer.get_order_count() }}</h5>
+                            <small class="text-muted">Total Orders</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card bg-success bg-opacity-10 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="display-6 fw-bold">${{ "%.2f"|format(customer.get_total_spent()) }}</h5>
+                            <small class="text-muted">Total Spent</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card bg-info bg-opacity-10 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            {% set avg = customer.get_total_spent() / customer.get_order_count() if customer.get_order_count() > 0 else 0 %}
+                            <h5 class="display-6 fw-bold">${{ "%.2f"|format(avg) }}</h5>
+                            <small class="text-muted">Average Order</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-6">
+                    <div class="card bg-warning bg-opacity-10 border-0 shadow-sm">
+                        <div class="card-body text-center">
+                            <h5 class="display-6 fw-bold">{{ customer.created_at.strftime('%Y') if customer.created_at else 'N/A' }}</h5>
+                            <small class="text-muted">Since Year</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders Card -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-shopping-cart me-2 text-primary"></i>Recent Orders</h5>
+                    <a href="{{ url_for('orders.create', customer_id=customer.id) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="Create new order for this customer">
+                        <i class="fas fa-plus me-1"></i> New Order
+                    </a>
+                </div>
+                <div class="card-body p-0">
+                    {% if customer.orders %}
+                        <div class="table-responsive">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>Order #</th>
+                                        <th>Date</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for order in customer.orders|sort(attribute='created_at', reverse=True) %}
+                                    <tr>
+                                        <td>
+                                            <a href="{{ url_for('orders.view', id=order.id) }}" class="fw-semibold text-decoration-none">
+                                                #{{ '%06d' % order.id }}
+                                            </a>
+                                        </td>
+                                        <td>{{ order.created_at.strftime('%b %d, %Y') }}</td>
+                                        <td>
+                                            <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'pending' else 'info' }}">
+                                                {{ order.status|title }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end fw-semibold">${{ "%.2f"|format(order.total_amount) }}</td>
+                                        <td class="text-end">
+                                            <a href="{{ url_for('orders.view', id=order.id) }}" class="btn btn-sm btn-outline-primary" data-bs-toggle="tooltip" title="View Order">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fas fa-shopping-cart fa-3x text-muted mb-3"></i>
+                            <p class="lead text-muted">No orders yet</p>
+                            <a href="{{ url_for('orders.create', customer_id=customer.id) }}" class="btn btn-primary">
+                                <i class="fas fa-plus me-1"></i> Create First Order
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Notes Card -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-sticky-note me-2 text-primary"></i>Notes</h5>
+                </div>
+                <div class="card-body">
+                    {% if customer.notes %}
+                        <p class="mb-0">{{ customer.notes|nl2br }}</p>
+                    {% else %}
+                        <p class="text-muted mb-0">No notes for this customer.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Delete Customer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete <strong>{{ customer.name }}</strong>? This action cannot be undone.</p>
+                {% if customer.orders|length > 0 %}
+                    <div class="alert alert-warning mt-3">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        This customer has {{ customer.orders|length }} order(s). Deleting the customer will not delete their orders.
+                    </div>
+                {% endif %}
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('customer.delete', id=customer.id) }}" method="POST" class="d-inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <button type="submit" class="btn btn-danger">Delete Customer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/pages/customer-view.js') }}"></script>
+{% endblock %}

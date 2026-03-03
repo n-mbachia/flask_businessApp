@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta name="X-CSRFToken" content="{{ csrf_token() }}">
+    <title>{% block title %}Profitability App{% endblock %}</title>
+    
+    <!-- Preload critical CSS -->
+    <link rel="preload" href="{{ url_for('static', filename='css/lib/bootstrap.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="{{ url_for('static', filename='css/lib/bootstrap-icons.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <link rel="preload" href="{{ url_for('static', filename='css/base.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    
+    <!-- Critical CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/bootstrap.min.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/bootstrap-icons.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+    
+    <!-- Non-critical CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" media="print" onload="this.media='all'">
+    
+    <!-- Theme CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/variables.css') }}" media="print" onload="this.media='all'">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/dark-mode.css') }}" media="(prefers-color-scheme: dark)" onload="this.media='all'">
+    
+    <!-- HTMX for Enhanced UX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
+    <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/ajax-header.js"></script>
+    
+    {% block extra_css %}{% endblock %}
+    {% block extra_head %}{% endblock %}
+    
+    <!-- Favicon -->
+    <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
+    
+    <!-- Theme Color for Mobile Browsers -->
+    <meta name="theme-color" content="#2C3639">
+    
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
+    
+    <!-- Meta Tags -->
+    <meta name="description" content="Profitability App - Track and analyze your business performance">
+    <meta name="author" content="Profitability App">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ request.url_root }}">
+    <meta property="og:title" content="Profitability App">
+    <meta property="og:description" content="Track and analyze your business performance">
+    <meta property="og:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ request.url_root }}">
+    <meta name="twitter:title" content="Profitability App">
+    <meta name="twitter:description" content="Track and analyze your business performance">
+    <meta name="twitter:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="{{ request.url_root }}">
+    
+    <!-- Preconnect to external domains -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    
+    <!-- Preload critical JS -->
+    <link rel="preload" href="{{ url_for('static', filename='js/lib/jquery-3.6.0.min.js') }}" as="script">
+    <link rel="preload" href="{{ url_for('static', filename='js/lib/bootstrap.bundle.min.js') }}" as="script">
+    
+    <script nonce="{{ g.csp_nonce }}">
+        // Initialize any critical JS that needs to run early
+        document.documentElement.classList.remove('no-js');
+        document.documentElement.classList.add('js');
+        
+        // Function to load non-critical CSS
+        function loadCSS(href) {
+            const link = document.createElement('link');
+            link.href = href;
+            link.rel = 'stylesheet';
+            document.head.appendChild(link);
+        }
+    </script>
+</head>
+<body class="d-flex flex-column min-vh-100">
+    {% include 'components/navigation.html' %}
+    
+    <main class="flex-grow-1">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="container mt-4">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+        
+        {% block content %}{% endblock %}
+    </main>
+    
+    {% include 'components/footer.html' %}
+    
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/lib/jquery-3.6.0.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/lib/bootstrap.bundle.min.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/components/stock-adjuster.js') }}"></script>
+    
+    {% block scripts %}{% endblock %}
+    
+    <!-- Initialize components after all scripts are loaded -->
+    <script>
+        // Wait for both DOM and all scripts to be loaded
+        window.addEventListener('load', function() {
+            // Check if jQuery is available
+            if (typeof jQuery === 'undefined') {
+                console.error('jQuery is not loaded');
+                return;
+            }
+            
+            // Check if Bootstrap is available
+            if (typeof bootstrap === 'undefined') {
+                console.error('Bootstrap is not loaded');
+                return;
+            }
+
+            // Initialize tooltips
+            jQuery(document).ready(function($) {
+                // Initialize tooltips
+                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+                tooltipTriggerList.map(function (tooltipTriggerEl) {
+                    return new bootstrap.Tooltip(tooltipTriggerEl, {
+                        trigger: 'hover'
+                    });
+                });
+
+                // Initialize popovers
+                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+                popoverTriggerList.map(function (popoverTriggerEl) {
+                    return new bootstrap.Popover(popoverTriggerEl, {
+                        trigger: 'focus'
+                    });
+                });
+            });
+        });
+    </script>
+    
+    <!-- Toast Container -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
+        <div id="toastContainer" class="toast-container"></div>
+    </div>
+</body>
+</html>

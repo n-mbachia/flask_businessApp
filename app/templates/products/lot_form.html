@@ -1,0 +1,96 @@
+{% extends "_base.html" %}
+
+{% block title %}Create New Lot{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3">Create New Lot for {{ product.name }}</h1>
+        <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Back to Inventory
+        </a>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-body">
+            <form method="POST" novalidate>
+                {{ form.hidden_tag() }}
+
+                <!-- Product (hidden or readonly) -->
+                <div class="mb-3">
+                    {{ form.product_id.label(class="form-label fw-semibold") }}
+                    {% if form.product_id.choices|length == 1 %}
+                        <!-- Only one product, likely pre‑selected -->
+                        {{ form.product_id(class="form-select", readonly=True) }}
+                    {% else %}
+                        {{ form.product_id(class="form-select" + (" is-invalid" if form.product_id.errors else "")) }}
+                        {% for error in form.product_id.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+
+                <!-- Lot Number (optional, auto‑generated if empty) -->
+                <div class="mb-3">
+                    {{ form.lot_number.label(class="form-label fw-semibold") }}
+                    {{ form.lot_number(class="form-control" + (" is-invalid" if form.lot_number.errors else ""), placeholder="Leave empty to auto‑generate") }}
+                    {% for error in form.lot_number.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                    <div class="form-text">If left blank, a unique lot number will be generated automatically.</div>
+                </div>
+
+                <!-- Received Date -->
+                <div class="mb-3">
+                    {{ form.received_date.label(class="form-label fw-semibold") }}
+                    {{ form.received_date(class="form-control" + (" is-invalid" if form.received_date.errors else ""), type="date") }}
+                    {% for error in form.received_date.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Quantity Received -->
+                <div class="mb-3">
+                    {{ form.quantity_received.label(class="form-label fw-semibold") }}
+                    {{ form.quantity_received(class="form-control" + (" is-invalid" if form.quantity_received.errors else ""), type="number", min="1") }}
+                    {% for error in form.quantity_received.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Cost per Unit -->
+                <div class="mb-3">
+                    {{ form.cost_per_unit.label(class="form-label fw-semibold") }}
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        {{ form.cost_per_unit(class="form-control" + (" is-invalid" if form.cost_per_unit.errors else ""), step="0.01", min="0") }}
+                    </div>
+                    {% for error in form.cost_per_unit.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                </div>
+
+                <!-- Expiration Date (optional) -->
+                <div class="mb-3">
+                    {{ form.expiration_date.label(class="form-label fw-semibold") }}
+                    {{ form.expiration_date(class="form-control" + (" is-invalid" if form.expiration_date.errors else ""), type="date") }}
+                    {% for error in form.expiration_date.errors %}
+                        <div class="invalid-feedback">{{ error }}</div>
+                    {% endfor %}
+                    <div class="form-text">Optional – only for perishable goods.</div>
+                </div>
+
+                <hr class="my-4">
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Create Lot
+                    </button>
+                    <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary">
+                        <i class="fas fa-times me-1"></i> Cancel
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

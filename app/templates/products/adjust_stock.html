@@ -1,0 +1,117 @@
+{% extends "_base.html" %}
+
+{% block title %}Adjust Stock - {{ product.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Adjust Stock - {{ product.name }}</h2>
+        <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary">
+            <i class="fas fa-arrow-left"></i> Back to Inventory
+        </a>
+    </div>
+
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Current Stock: {{ product.current_stock }} units</h5>
+                    
+                    <form method="POST" action="{{ url_for('products.adjust_stock', product_id=product.id) }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-3">
+                            {{ form.movement_type.label(class="form-label") }}
+                            {{ form.movement_type(class="form-select") }}
+                            {% for error in form.movement_type.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.quantity.label(class="form-label") }}
+                            <div class="input-group">
+                                {{ form.quantity(class="form-control", min="0.01", step="0.01") }}
+                                <span class="input-group-text">units</span>
+                            </div>
+                            {% for error in form.quantity.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.unit_cost.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                {{ form.unit_cost(class="form-control", min="0.01", step="0.01", value=product.cogs_per_unit) }}
+                            </div>
+                            <small class="form-text text-muted">Cost per unit for this movement</small>
+                            {% for error in form.unit_cost.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label") }}
+                            {{ form.notes(class="form-control", rows="3") }}
+                            <small class="form-text text-muted">Optional notes about this movement</small>
+                            {% for error in form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary me-md-2">
+                                Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save"></i> Save Movement
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">Recent Movements</h5>
+                </div>
+                <div class="card-body">
+                    {% if product.movements %}
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Qty</th>
+                                        <th>Unit Cost</th>
+                                        <th>Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for movement in product.movements|sort(attribute='created_at', reverse=True)|slice(5) %}
+                                        <tr>
+                                            <td>{{ movement.created_at.strftime('%Y-%m-%d') }}</td>
+                                            <td>
+                                                <span class="badge {% if movement.quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                                    {{ movement.movement_type|replace('_', ' ')|title }}
+                                                </span>
+                                            </td>
+                                            <td>{{ movement.quantity|abs }}</td>
+                                            <td>${{ "%.2f"|format(movement.unit_cost) }}</td>
+                                            <td>{{ movement.notes|truncate(30) if movement.notes else '-' }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted mb-0">No recent movements found.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

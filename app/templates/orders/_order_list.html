@@ -1,0 +1,137 @@
+{% if orders.items|length > 0 %}
+{% for order in orders.items %}
+
+<tr id="order-row-{{ order.id }}">
+    <td><a href="{{ url_for('orders.view', id=order.id) }}" class="fw-bold text-decoration-none">#{{ '%06d' % order.id }}</a></td>
+    <td><span class="text-nowrap">{{ order.order_date.strftime('%Y-%m-%d %H:%M') }}</span></td>
+    <td>{{ order.customer.name if order.customer else 'Guest' }}</td>
+    <td>
+        <span class="badge bg-{{ 'success' if order.status == 'completed' else 'warning' if order.status == 'processing' else 'danger' if order.status == 'cancelled' else 'info' }} badge-order me-1">
+            {{ order.status|title }}
+        </span>
+        <span class="badge bg-{{ 'success' if order.payment_status == 'paid' else 'secondary' if order.payment_status == 'unpaid' else 'info' }} badge-payment me-1">
+            {{ order.payment_status|title }}
+        </span>
+        {% if order.source == 'storefront' %}
+            <span class="badge bg-info badge-order">Storefront</span>
+        {% endif %}
+    </td>
+    <td class="text-end fw-semibold">${{ "%.2f"|format(order.total_amount) }}</td>
+    <td class="text-end">
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{{ url_for('orders.view', id=order.id) }}" class="btn btn-outline-primary action-btn" data-bs-toggle="tooltip" title="View">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('orders.edit', id=order.id) }}" class="btn btn-outline-secondary action-btn {% if order.status in ['completed', 'cancelled'] %}disabled{% endif %}" data-bs-toggle="tooltip" title="Edit">
+                <i class="fas fa-edit"></i>
+            </a>
+            <button class="btn btn-outline-danger action-btn cancel-order-btn" data-order-id="{{ order.id }}" data-bs-toggle="tooltip" title="Cancel" {% if order.status in ['completed', 'cancelled'] %}disabled{% endif %}>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </td>
+</tr>
+
+
+<!-- tr class="order-card {{ order.status }}">
+    <td>
+        <a href="{{ url_for('orders.view', id=order.id) }}" class="fw-bold text-decoration-none">
+            #{{ '%06d' % order.id }}
+        </a>
+    </td>
+    <td class="date">{{ order.order_date.strftime('%Y-%m-%d %H:%M') if order.order_date else 'N/A' }}</td>
+    <td>
+        <div class="d-flex align-items-center">
+            {% if order.customer %}
+            <div class="me-2">
+                <i class="fas fa-user text-muted"></i>
+            </div>
+            <div>
+                <div class="fw-medium">{{ order.customer.name }}</div>
+                <div class="text-muted small">{{ order.customer.email or '' }}</div>
+            </div>
+            {% else %}
+            <span class="text-muted">Guest</span>
+            {% endif %}
+        </div>
+    </td>
+    <td>
+        <div class="d-flex flex-column gap-1">
+            <span class="order-status status-{{ order.status }}">
+                {{ order.status|title }}
+            </span>
+            <span class="payment-status payment-{{ order.payment_status|lower|replace(' ', '-') }}">
+                {{ order.payment_status|title }}
+            </span>
+        </div>
+    </td>
+    <td class="text-end">
+        <div class="currency">{{ order.total_amount|default(0) }}</div>
+        <div class="text-muted small">{{ order.items|length }} item{% if order.items|length != 1 %}s{% endif %}</div>
+    </td>
+    <td class="text-end">
+        <div class="btn-group btn-group-sm" role="group">
+            <a href="{{ url_for('orders.view', id=order.id) }}" 
+               class="btn btn-outline-primary"
+               data-bs-toggle="tooltip" 
+               title="View Order">
+                <i class="fas fa-eye"></i>
+            </a>
+            <a href="{{ url_for('orders.edit', id=order.id) }}" 
+               class="btn btn-outline-secondary"
+               data-bs-toggle="tooltip" 
+               title="Edit Order"
+               {% if order.status in ['completed', 'cancelled'] %}disabled{% endif %}>
+                <i class="fas fa-edit"></i>
+            </a>
+            <button type="button" 
+                    class="btn btn-outline-danger cancel-order-btn"
+                    data-bs-toggle="tooltip" 
+                    title="Cancel Order"
+                    data-order-id="{{ order.id }}"
+                    {% if order.status in ['completed', 'cancelled'] %}disabled{% endif %}>
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </td>
+</tr -->
+{% else %}
+<tr>
+    <td colspan="6" class="text-center py-4">
+        <div class="text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <h5>No orders found</h5>
+            <p class="mb-0">
+                {% if request.args.get('q') or request.args.get('status') or request.args.get('customer_id') %}
+                    Try adjusting your search or filter criteria
+                {% else %}
+                    Get started by creating a new order
+                {% endif %}
+            </p>
+        </div>
+    </td>
+</tr>
+{% endfor %}
+{% else %}
+<tr>
+    <td colspan="6" class="text-center py-4">
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i> No orders found matching your criteria.
+        </div>
+    </td>
+</tr>
+{% endif %}
+
+{% if orders.items %}
+<tr id="emptyRow" style="display: none;">
+    <td colspan="6" class="text-center py-4">
+        <div class="text-muted">
+            <i class="fas fa-inbox fa-3x mb-3"></i>
+            <h5>No more orders to load</h5>
+        </div>
+    </td>
+</tr>
+{% endif %}
+
+<!-- Include external JavaScript -->
+<script src="{{ url_for('static', filename='js/pages/orders/order-list.js') }}"></script>

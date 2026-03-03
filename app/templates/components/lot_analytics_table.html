@@ -1,0 +1,300 @@
+{# lot_analytics_table.html - Enhanced reusable lot analytics table component #}
+<div class="lot-analytics-container mb-4">
+    <!-- Enhanced Header with Stats -->
+    <div class="card shadow-sm mb-3">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <h5 class="card-title mb-0">
+                        <i class="fas fa-boxes text-primary me-2"></i>
+                        Lot Performance Analytics
+                    </h5>
+                    <small class="text-muted">{{ lots|length }} lots total</small>
+                </div>
+                <div class="col-md-6">
+                    <div class="d-flex gap-2 justify-content-md-end">
+                        <div class="input-group input-group-sm" style="width: 200px;">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" id="lotSearch" class="form-control" placeholder="Search lots...">
+                        </div>
+                        <select class="form-select form-select-sm" id="lotStatusFilter" style="width: auto;">
+                            <option value="">All Statuses</option>
+                            <option value="active">Active</option>
+                            <option value="expired">Expired</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-secondary" id="exportLotsBtn" title="Export Data">
+                            <i class="fas fa-download"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Stats -->
+            <div class="row mt-3" id="lotQuickStats">
+                <div class="col-md-3 col-sm-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-primary bg-opacity-10 rounded p-2">
+                                <i class="fas fa-boxes text-primary"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0" id="totalLotsCount">0</h6>
+                            <small class="text-muted">Total Lots</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-success bg-opacity-10 rounded p-2">
+                                <i class="fas fa-check-circle text-success"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0" id="activeLotsCount">0</h6>
+                            <small class="text-muted">Active Lots</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-warning bg-opacity-10 rounded p-2">
+                                <i class="fas fa-exclamation-triangle text-warning"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0" id="criticalLotsCount">0</h6>
+                            <small class="text-muted">Critical Lots</small>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3 col-sm-6 mb-2">
+                    <div class="d-flex align-items-center">
+                        <div class="flex-shrink-0">
+                            <div class="bg-danger bg-opacity-10 rounded p-2">
+                                <i class="fas fa-times-circle text-danger"></i>
+                            </div>
+                        </div>
+                        <div class="flex-grow-1 ms-3">
+                            <h6 class="mb-0" id="expiredLotsCount">0</h6>
+                            <small class="text-muted">Expired Lots</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enhanced Table -->
+    <div class="card shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="lotAnalyticsTable">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th data-sort="lot_number" class="sortable-column">
+                            Lot # 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th data-sort="received_date" class="sortable-column">
+                            Received 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="quantity">
+                            Units 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="sold">
+                            Sold 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="sell_through">
+                            Sell-Through 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="revenue">
+                            Revenue 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="margin">
+                            Margin 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th class="text-end sortable-column" data-sort="velocity">
+                            Velocity 
+                            <i class="fas fa-sort sort-icon ms-1"></i>
+                        </th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for lot in lots %}
+                    <tr class="lot-row {% if lot['expiration_status'] == 'expired' %}table-danger
+                              {% elif lot['expiration_status'] == 'critical' %}table-warning
+                              {% elif lot['sell_through_rate'] < 50 %}table-info{% endif %}"
+                        data-status="{{ lot['expiration_status'] }}"
+                        data-lot-id="{{ lot['id'] }}">
+                        <td>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-medium">{{ lot['lot_number'] }}</span>
+                                {% if lot['expiration_status'] == 'expired' %}
+                                    <i class="fas fa-exclamation-circle text-danger ms-2" title="Expired"></i>
+                                {% elif lot['expiration_status'] == 'critical' %}
+                                    <i class="fas fa-exclamation-triangle text-warning ms-2" title="Critical"></i>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="d-flex flex-column">
+                                <span>{{ lot['received_date'].strftime('%Y-%m-%d') if lot['received_date'] else 'N/A' }}</span>
+                                {% if lot['days_since_received'] %}
+                                    <small class="text-muted">{{ lot['days_since_received'] }} days ago</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-medium">{{ lot['quantity_received']|number_format(0) }}</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex flex-column">
+                                <span class="fw-medium">{{ lot['total_units_sold']|number_format(0) }}</span>
+                                {% if lot['quantity_received'] > 0 %}
+                                    <small class="text-muted">{{ "%.1f"|format((lot['total_units_sold'] / lot['quantity_received']) * 100) }}%</small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center justify-content-end">
+                                <span class="fw-medium">{{ "%.1f"|format(lot['sell_through_rate']) }}%</span>
+                                {% if lot['sell_through_rate'] >= 80 %}
+                                    <i class="fas fa-arrow-up text-success ms-1" title="Excellent"></i>
+                                {% elif lot['sell_through_rate'] >= 60 %}
+                                    <i class="fas fa-minus text-warning ms-1" title="Good"></i>
+                                {% else %}
+                                    <i class="fas fa-arrow-down text-danger ms-1" title="Poor"></i>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <span class="fw-medium">${{ lot['total_revenue']|number_format(2) }}</span>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex align-items-center justify-content-end">
+                                <span class="fw-medium {{ 'text-danger' if lot['gross_margin'] < (product.margin_threshold|default(20)) else 'text-success' }}">
+                                    {{ lot['gross_margin']|number_format(1) }}%
+                                </span>
+                                {% if lot['gross_margin'] < (product.margin_threshold|default(20)) %}
+                                    <i class="fas fa-exclamation-triangle text-warning ms-1" title="Below threshold"></i>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td class="text-end">
+                            <div class="d-flex flex-column align-items-end">
+                                <span class="fw-medium">{{ lot['velocity']['velocity']|number_format(2) }}/day</span>
+                                {% if lot['velocity']['trend'] > 0 %}
+                                    <small class="text-success">
+                                        <i class="fas fa-arrow-up"></i> {{ "%.1f"|format(lot['velocity']['trend']) }}%
+                                    </small>
+                                {% elif lot['velocity']['trend'] < 0 %}
+                                    <small class="text-danger">
+                                        <i class="fas fa-arrow-down"></i> {{ "%.1f"|format(lot['velocity']['trend']) }}%
+                                    </small>
+                                {% else %}
+                                    <small class="text-muted">
+                                        <i class="fas fa-minus"></i> Stable
+                                    </small>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            {% if lot['expiration_status'] == 'expired' %}
+                                <span class="badge bg-danger">
+                                    <i class="fas fa-times-circle me-1"></i>Expired
+                                </span>
+                            {% elif lot['expiration_status'] == 'critical' %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>Critical
+                                </span>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="fas fa-check-circle me-1"></i>Active
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm" role="group">
+                                <a href="{{ url_for('products.lot_detail', lot_id=lot['id']) }}" 
+                                   class="btn btn-outline-primary" 
+                                   title="View Details">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                                <button type="button" 
+                                        class="btn btn-outline-secondary" 
+                                        title="Adjust Stock"
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#adjustStockModal" 
+                                        data-lot-id="{{ lot['id'] }}"
+                                        data-lot-number="{{ lot['lot_number'] }}">
+                                    <i class="fas fa-boxes-packing"></i>
+                                </button>
+                                <button type="button" 
+                                        class="btn btn-outline-info" 
+                                        title="View Analytics"
+                                        onclick="showLotAnalytics({{ lot['id']|tojson }})">
+                                    <i class="fas fa-chart-line"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="10" class="text-center py-4">
+                            <div class="text-muted">
+                                <i class="fas fa-inbox fa-3x mb-3"></i>
+                                <h5>No Lots Found</h5>
+                                <p>Try adjusting your search or filter criteria.</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Table Footer with Pagination -->
+        <div class="card-footer bg-light">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <small class="text-muted">
+                        Showing <span id="visibleLotsCount">0</span> of {{ lots|length }} lots
+                    </small>
+                </div>
+                <div class="col-md-6">
+                    <nav aria-label="Lot table pagination">
+                        <ul class="pagination pagination-sm justify-content-md-end mb-0" id="lotTablePagination">
+                            <!-- Pagination will be populated by JavaScript -->
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<link href="{{ url_for('static', filename='css/lot-analytics.css') }}" rel="stylesheet">
+
+<script src="{{ url_for('static', filename='js/lot-analytics.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    window.lotAnalyticsTable = new LotAnalyticsTable('lotAnalyticsTable', {
+        pageSize: 10,
+        sortable: true,
+        filterable: true,
+        exportable: true,
+        apiUrl: '/api/v1/products/{{ product.id }}/lot-analytics'
+    });
+});
+</script>

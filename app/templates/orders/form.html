@@ -1,0 +1,432 @@
+{% extends "orders/base.html" %}
+
+{% block page_title %}{{ title or 'Create Order' }}{% endblock %}
+
+{% block order_content %}
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">{{ title or 'Create Order' }}</h5>
+            </div>
+            <div class="card-body">
+                {% if form.errors %}
+                <div class="alert alert-danger" role="alert">
+                    <div class="fw-semibold mb-1">Please fix the following errors:</div>
+                    <ul class="mb-0">
+                        {% for field_name, field_errors in form.errors.items() %}
+                            {% for error in field_errors %}
+                            <li>{{ field_name|replace('_', ' ')|title }}: {{ error }}</li>
+                            {% endfor %}
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+
+                <form method="POST" class="needs-validation" novalidate>
+                    {{ form.hidden_tag() }}
+                    {{ form.subtotal(type="hidden") }}
+                    {{ form.tax_amount(type="hidden") }}
+                    {{ form.shipping_amount(type="hidden") }}
+                    {{ form.total_amount(type="hidden") }}
+                    
+                    <!-- Customer Selection -->
+                    <div class="row mb-4">
+                        <div class="col-md-3">
+                            {{ form.customer_id.label(class="form-label fw-semibold") }}
+                            {% if order and order.status in ['completed', 'cancelled'] %}
+                                <div class="input-group">
+                                    {{ form.customer_id(class="form-control", disabled=true) }}
+                                    <span class="input-group-text"><i class="bi bi-lock-fill text-warning"></i></span>
+                                </div>
+                                <div class="form-text text-warning">
+                                    <i class="bi bi-info-circle"></i> Customer cannot be changed for {{ order.status }} orders
+                                </div>
+                            {% else %}
+                                {{ form.customer_id(class="form-select" + (" is-invalid" if form.customer_id.errors else "")) }}
+                                {% if form.customer_id.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.customer_id.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">Select a customer (optional) or choose Walk-in / Guest</div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.order_date.label(class="form-label fw-semibold") }}
+                            {% if order and order.status in ['completed', 'cancelled'] %}
+                                <div class="input-group">
+                                    {{ form.order_date(class="form-control", disabled=true) }}
+                                    <span class="input-group-text"><i class="bi bi-lock-fill text-warning"></i></span>
+                                </div>
+                                <div class="form-text text-warning">
+                                    <i class="bi bi-info-circle"></i> Order date cannot be changed for {{ order.status }} orders
+                                </div>
+                            {% else %}
+                                {{ form.order_date(class="form-control" + (" is-invalid" if form.order_date.errors else ""), value=now.strftime('%Y-%m-%d') if now else '') }}
+                                {% if form.order_date.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.order_date.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.payment_method.label(class="form-label fw-semibold") }}
+                            {% if order and order.status in ['completed', 'cancelled'] %}
+                                <div class="input-group">
+                                    {{ form.payment_method(class="form-select") }}
+                                    <span class="input-group-text"><i class="bi bi-unlock-fill text-success"></i></span>
+                                </div>
+                                <div class="form-text text-success">
+                                    <i class="bi bi-info-circle"></i> Payment method can be updated
+                                </div>
+                            {% else %}
+                                {{ form.payment_method(class="form-select" + (" is-invalid" if form.payment_method.errors else "")) }}
+                            {% endif %}
+                            {% if form.payment_method.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.payment_method.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-3">
+                            {{ form.payment_status.label(class="form-label fw-semibold") }}
+                            {% if order and order.status in ['completed', 'cancelled'] %}
+                                <div class="input-group">
+                                    {{ form.payment_status(class="form-select") }}
+                                    <span class="input-group-text"><i class="bi bi-unlock-fill text-success"></i></span>
+                                </div>
+                                <div class="form-text text-success">
+                                    <i class="bi bi-info-circle"></i> Payment status can be updated
+                                </div>
+                            {% else %}
+                                {{ form.payment_status(class="form-select" + (" is-invalid" if form.payment_status.errors else "")) }}
+                            {% endif %}
+                            {% if form.payment_status.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.payment_status.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <!-- Order Notes -->
+                    <div class="row mb-4">
+                        <div class="col-12">
+                            {{ form.notes.label(class="form-label fw-semibold") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), rows="3", placeholder="Add any special instructions or notes...") }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                 
+                    <!-- ORDER ITEMS -->
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h6 class="mb-0 fw-semibold">Order Items</h6>
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="addItemBtn">
+                                <i class="fas fa-plus me-1"></i> Add Item
+                            </button>
+                        </div>
+                        <div id="order-items" class="border rounded p-3 bg-light">
+                            {% if order and order.items %}
+                                {% for item in order.items %}
+                                    {% with index = loop.index0 %}
+                                    <div class="card mb-3 order-item" data-index="{{ index }}">
+                                        <div class="card-body">
+                                            <div class="row">
+                                                <div class="col-md-4">
+                                                    <label class="form-label fw-semibold">Product</label>
+                                                    <select name="items-{{ index }}-product_id" class="form-select product-select" data-product-id="{{ item.product_id }}">
+                                                        <option value="">Select product</option>
+                                                        {% for p in products %}
+                                                            <option value="{{ p.id }}"
+                                                                    data-price="{{ p.selling_price_per_unit or 0 }}"
+                                                                    data-stock="{{ p.current_stock or 0 }}"
+                                                                    {% if p.id == item.product_id %}selected{% endif %}>
+                                                                {{ p.name }}
+                                                            </option>
+                                                        {% endfor %}
+                                                    </select>
+                                                    <div class="product-details mt-2"></div>
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold">Qty</label>
+                                                    <input type="number" name="items-{{ index }}-quantity" class="form-control quantity" value="{{ item.quantity }}" min="1">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold">Unit Price</label>
+                                                    <input type="number" name="items-{{ index }}-unit_price" class="form-control unit-price" step="0.01" value="{{ item.unit_price }}">
+                                                </div>
+                                                <div class="col-md-2">
+                                                    <label class="form-label fw-semibold">Subtotal</label>
+                                                    <input type="text" class="form-control item-subtotal bg-light" name="items-{{ index }}-subtotal" value="{{ "%.2f"|format(item.unit_price * item.quantity) }}" readonly>
+                                                </div>
+                                                <div class="col-md-2 d-flex align-items-end">
+                                                    <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endwith %}
+                                {% endfor %}
+                            {% else %}
+                                <div class="text-center text-muted py-4 empty-state">
+                                    <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                                    <p class="mb-0">No items added yet. Click "Add Item" to start.</p>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    
+                    <!-- ORDER TOTALS -->
+                    <div class="row mb-4">
+                        <div class="col-md-8">
+                            <div class="row g-3" id="order-totals-display">
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Subtotal</label>
+                                    <input class="form-control bg-light" id="subtotalDisplay" value="0.00" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Tax</label>
+                                    <input class="form-control bg-light" id="taxDisplay" value="0.00" readonly>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold" for="discountInput">Discount</label>
+                                    {{ form.discount_amount(class="form-control text-end", id="discountInput", min="0", step="0.01", value=form.discount_amount.data or '0.00') }}
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Total</label>
+                                    <input class="form-control fw-bold bg-light" id="totalDisplay" value="0.00" readonly>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <h6 class="card-title">Order Summary</h6>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <span class="fw-bold" id="summarySubtotal">0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Tax ({{ tax_rate|default('0') }}%):</span>
+                                        <span class="fw-bold" id="summaryTax">0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Discount:</span>
+                                        <span class="fw-bold text-danger" id="summaryDiscount">0.00</span>
+                                    </div>
+                                    <hr>
+                                    <div class="d-flex justify-content-between">
+                                        <span class="fw-bold">Total:</span>
+                                        <span class="fw-bold" id="summaryTotal">0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Mark as Completed Checkbox -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <div class="form-check">
+                                {{ form.mark_completed(class="form-check-input", value="1") }}
+                                <label class="form-check-label" for="{{ form.mark_completed.id }}">
+                                    Mark as completed now (update inventory and dashboard immediately)
+                                </label>
+                            </div>
+                            <div class="form-text">Uncheck this to save as pending for later processing.</div>
+                        </div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('orders.index') }}" class="btn btn-outline-secondary">
+                            <i class="fas fa-times me-1"></i> Cancel
+                        </a>
+                        <div>
+                            <button type="button" class="btn btn-outline-primary me-2" onclick="window.print()">
+                                <i class="fas fa-print me-1"></i> Print
+                            </button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-save me-1"></i> {{ 'Update' if order else 'Create' }} Order
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const itemsContainer = document.getElementById('order-items');
+        const addBtn = document.getElementById('addItemBtn');
+        let itemIndex = {{ order.items|length if order else 0 }};
+
+        // Product data from server (with current_stock)
+        const products = [
+            {% for p in products %}
+            { id: {{ p.id }}, name: "{{ p.name|e }}", price: {{ p.selling_price_per_unit|default(0) }}, stock: {{ p.current_stock }} }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+        const discountInput = document.getElementById('discountInput');
+
+        function createItemHtml(index) {
+            return `
+                <div class="card mb-3 order-item" data-index="${index}">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Product</label>
+                                <select name="items-${index}-product_id" class="form-select product-select">
+                                    <option value="">Select product</option>
+                                    ${products.map(p => `<option value="${p.id}" data-price="${p.price}" data-stock="${p.stock}">${p.name}</option>`).join('')}
+                                </select>
+                                <div class="product-details mt-2"></div>
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Qty</label>
+                                <input type="number" name="items-${index}-quantity" class="form-control quantity" value="1" min="1">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Unit Price</label>
+                                <input type="number" name="items-${index}-unit_price" class="form-control unit-price" step="0.01" value="0.00">
+                            </div>
+                            <div class="col-md-2">
+                                <label class="form-label fw-semibold">Subtotal</label>
+                                <input type="text" class="form-control item-subtotal bg-light" name="items-${index}-subtotal" value="0.00" readonly>
+                            </div>
+                            <div class="col-md-2 d-flex align-items-end">
+                                <button type="button" class="btn btn-outline-danger btn-sm remove-item">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateTotals() {
+            let subtotal = 0;
+            document.querySelectorAll('.order-item').forEach(item => {
+                const qty = parseFloat(item.querySelector('.quantity').value) || 0;
+                const price = parseFloat(item.querySelector('.unit-price').value) || 0;
+                const itemSubtotal = qty * price;
+                subtotal += itemSubtotal;
+                item.querySelector('.item-subtotal').value = itemSubtotal.toFixed(2);
+            });
+
+            const taxRate = parseFloat('{{ tax_rate|default("0") }}');
+            const tax = subtotal * taxRate;
+            const discount = discountInput ? Math.max(0, parseFloat(discountInput.value) || 0) : 0;
+            const totalBeforeDiscount = subtotal + tax;
+            const total = Math.max(0, totalBeforeDiscount - discount);
+
+            // Update displays
+            document.getElementById('subtotalDisplay').value = subtotal.toFixed(2);
+            document.getElementById('taxDisplay').value = tax.toFixed(2);
+            document.getElementById('totalDisplay').value = total.toFixed(2);
+            document.getElementById('summarySubtotal').textContent = subtotal.toFixed(2);
+            document.getElementById('summaryTax').textContent = tax.toFixed(2);
+            document.getElementById('summaryTotal').textContent = total.toFixed(2);
+            document.getElementById('summaryDiscount').textContent = discount.toFixed(2);
+
+            // Update hidden form fields
+            document.querySelector('input[name="subtotal"]').value = subtotal.toFixed(2);
+            document.querySelector('input[name="tax_amount"]').value = tax.toFixed(2);
+            document.querySelector('input[name="total_amount"]').value = total.toFixed(2);
+        }
+
+        function attachItemEvents(item) {
+            const select = item.querySelector('.product-select');
+            const qty = item.querySelector('.quantity');
+            const price = item.querySelector('.unit-price');
+            const details = item.querySelector('.product-details');
+
+            const updateProductDetails = function() {
+                const selected = select.options[select.selectedIndex];
+                if (selected.value) {
+                    const product = products.find(p => p.id == selected.value);
+                    if (product) {
+                        price.value = product.price.toFixed(2);
+                        let warning = '';
+                        if (product.stock <= 5) warning = '<br><small class="text-warning">⚠️ Low stock!</small>';
+                        details.innerHTML = `
+                            <div class="alert alert-info py-2 small">
+                                <strong>Price:</strong> $${product.price.toFixed(2)}<br>
+                                <strong>Stock:</strong> ${product.stock} units${warning}
+                            </div>
+                        `;
+                    }
+                } else {
+                    details.innerHTML = '';
+                    price.value = '0.00';
+                }
+                updateTotals();
+            };
+
+            select.addEventListener('change', updateProductDetails);
+            qty.addEventListener('input', updateTotals);
+            price.addEventListener('input', updateTotals);
+            item.querySelector('.remove-item').addEventListener('click', function() {
+                item.remove();
+                if (itemsContainer.children.length === 0) {
+                    itemsContainer.innerHTML = `
+                        <div class="text-center text-muted py-4 empty-state">
+                            <i class="fas fa-shopping-cart fa-2x mb-2"></i>
+                            <p class="mb-0">No items added yet. Click "Add Item" to start.</p>
+                        </div>
+                    `;
+                }
+                updateTotals();
+            });
+        }
+
+        addBtn.addEventListener('click', function() {
+            // Remove empty state if present
+            if (itemsContainer.querySelector('.empty-state')) {
+                itemsContainer.innerHTML = '';
+            }
+            const html = createItemHtml(itemIndex);
+            itemsContainer.insertAdjacentHTML('beforeend', html);
+            const newItem = itemsContainer.lastElementChild;
+            attachItemEvents(newItem);
+            itemIndex++;
+        });
+
+        // Initialize existing items (if editing)
+        document.querySelectorAll('.order-item').forEach(item => attachItemEvents(item));
+        if (discountInput) {
+            discountInput.addEventListener('input', updateTotals);
+        }
+        updateTotals();
+    });
+</script>
+<script>
+    window.ORDER_CUSTOMERS = {{ customer_list_json|default('[]')|safe }};
+</script>
+{% endblock %}

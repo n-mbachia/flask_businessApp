@@ -1,0 +1,48 @@
+{% extends "_base.html" %}
+
+{% block title %}Unconfirmed Account{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">Account Not Confirmed</h4>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-envelope fa-5x text-primary mb-3"></i>
+                        <h3>Please confirm your account</h3>
+                    </div>
+                    
+                    <p class="lead">
+                        Welcome, {{ current_user.username }}! Before you can access this page, you need to confirm your account.
+                        Check your email ({{ current_user.email }}) for a confirmation link.
+                    </p>
+                    
+                    <p>
+                        Didn't receive the email? 
+                        <a href="{{ url_for('auth.resend_confirmation') }}" class="btn btn-link p-0">
+                            Click here to resend the confirmation email
+                        </a>.
+                    </p>
+                    
+                    <div class="alert alert-info mt-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        If you're having trouble finding the email, please check your spam folder.
+                    </div>
+                </div>
+                <div class="card-footer text-center">
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary me-2">
+                        <i class="fas fa-sign-out-alt me-1"></i> Logout
+                    </a>
+                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
+                        <i class="fas fa-home me-1"></i> Return Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

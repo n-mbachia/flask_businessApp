@@ -1,0 +1,115 @@
+{% extends "_base.html" %}
+
+{% block title %}Settings - Profitability App{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8 col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Account Settings</h5>
+                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-light">
+                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('auth.settings') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">Notification Preferences</h6>
+                            <div class="form-check form-switch mb-3">
+                                {{ form.email_notifications(class="form-check-input") }}
+                                {{ form.email_notifications.label(class="form-check-label") }}
+                                <div class="form-text">Receive email notifications for important updates</div>
+                            </div>
+                            
+                            <div class="form-check form-switch mb-3">
+                                {{ form.low_stock_alerts(class="form-check-input") }}
+                                {{ form.low_stock_alerts.label(class="form-check-label") }}
+                                <div class="form-text">Get notified when stock is running low</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">Display Settings</h6>
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    {{ form.items_per_page.label(class="form-label") }}
+                                    {{ form.items_per_page(class="form-select") }}
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    {{ form.theme.label(class="form-label") }}
+                                    {{ form.theme(class="form-select") }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h6 class="border-bottom pb-2 mb-3">Business Settings</h6>
+                            <div class="mb-3">
+                                {{ form.threshold.label(class="form-label") }}
+                                <div class="input-group">
+                                    {{ form.threshold(class="form-control") }}
+                                    <span class="input-group-text">items</span>
+                                </div>
+                                <div class="form-text">Get alerts when stock falls below this number</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                {{ form.currency.label(class="form-label") }}
+                                {{ form.currency(class="form-select") }}
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            {{ form.submit(class="btn btn-primary") }}
+                        </div>
+                    </form>
+                </div>
+                <div class="card-footer text-muted small">
+                    <div class="d-flex justify-content-between">
+                        <span>Last updated: {{ current_user.updated_at.strftime('%B %d, %Y %H:%M') if current_user.updated_at else 'Never' }}</span>
+                        <a href="{{ url_for('auth.profile') }}" class="text-decoration-none">
+                            <i class="bi bi-person me-1"></i>View Profile
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Theme switcher
+    const themeSelect = document.getElementById('theme');
+    if (themeSelect) {
+        // Apply current theme on load
+        const currentTheme = '{{ current_theme }}';
+        if (currentTheme === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-bs-theme', currentTheme);
+        }
+        
+        // Handle theme change
+        themeSelect.addEventListener('change', function() {
+            const theme = this.value;
+            if (theme === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

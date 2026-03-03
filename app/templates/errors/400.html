@@ -1,0 +1,14 @@
+{% extends "errors/base_error.html" %}
+
+{% block title %}400 - Bad Request{% endblock %}
+
+{% block content %}
+    <div class="error-code">400</div>
+    <h1 class="error-message">Bad Request</h1>
+    <p class="lead">The server could not understand your request.</p>
+    {% if error %}
+        <div class="alert alert-warning mt-3">
+            {{ error }}
+        </div>
+    {% endif %}
+{% endblock %}

@@ -1,0 +1,113 @@
+/* cards.css - Card component styles */
+
+/* Base card */
+.card {
+  background: var(--color-white);
+  border: var(--border-width) solid var(--color-gray-300);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all var(--transition-normal) var(--transition-timing);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Card hover effect */
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-md);
+}
+
+/* Card image */
+.card-img {
+  width: 100%;
+  overflow: hidden;
+  border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+}
+
+.card-img img {
+  width: 100%;
+  height: auto;
+  transition: transform var(--transition-normal) var(--transition-timing);
+}
+
+.card:hover .card-img img {
+  transform: scale(1.03);
+}
+
+/* Card body */
+.card-body {
+  padding: var(--spacing-md);
+  flex: 1;
+}
+
+/* Card title */
+.card-title {
+  margin: 0 0 var(--spacing-xs);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text);
+}
+
+/* Card text */
+.card-text {
+  margin: 0 0 var(--spacing-sm);
+  color: var(--color-text-muted);
+}
+
+/* Card footer */
+.card-footer {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-gray-100);
+  border-top: var(--border-width) solid var(--color-gray-200);
+  border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+}
+
+/* Card badges */
+.card-badge {
+  position: absolute;
+  top: var(--spacing-sm);
+  right: var(--spacing-sm);
+  background: var(--color-primary);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--border-radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Card actions */
+.card-actions {
+  display: flex;
+  gap: var(--spacing-xs);
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--color-gray-100);
+  border-top: var(--border-width) solid var(--color-gray-200);
+}
+
+/* Responsive card layout */
+.card-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  margin-bottom: var(--spacing-md);
+}
+
+/* Card themes */
+.card-primary {
+  border-color: var(--color-primary);
+}
+
+.card-primary .card-header {
+  background: var(--color-primary);
+  color: white;
+}
+
+.card-secondary {
+  border-color: var(--color-secondary);
+}
+
+.card-secondary .card-header {
+  background: var(--color-secondary);
+  color: white;
+}

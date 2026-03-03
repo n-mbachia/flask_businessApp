@@ -1,0 +1,52 @@
+{% extends "_base.html" %}
+
+{% block title %}Pending Storefront Products{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-0">Pending Products</h1>
+            <p class="text-muted">Approve vendor submissions before they are publicly visible.</p>
+        </div>
+        <a class="btn btn-outline-secondary" href="{{ url_for('storefront.manage_vendors') }}">
+            <i class="bi bi-people-fill me-1"></i>Vendor Roster
+        </a>
+    </div>
+
+    {% if products %}
+        <div class="row g-4">
+            {% for product in products %}
+            <div class="col-md-6">
+                <div class="card shadow-sm border-0">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <h2 class="h5 mb-0">{{ product.name }}</h2>
+                            <span class="badge bg-warning text-dark">Pending</span>
+                        </div>
+                        <p class="text-muted mb-2">{{ product.category }}</p>
+                        <p class="text-muted small mb-3">{{ product.description|default('No description provided') }}</p>
+                        <dl class="row small mb-3">
+                            <dt class="col-5">Vendor</dt>
+                            <dd class="col-7">{{ product.user.username if product.user else 'Unknown' }}</dd>
+                            <dt class="col-5">Price</dt>
+                            <dd class="col-7">${{ "%0.2f"|format(product.selling_price_per_unit) }}</dd>
+                        </dl>
+                        <form method="POST" action="{{ url_for('storefront.approve_product', product_id=product.id) }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-sm w-100">
+                                <i class="bi bi-check-circle me-1"></i>Approve Product
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No pending storefront products at this time.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

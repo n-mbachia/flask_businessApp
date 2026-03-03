@@ -1,0 +1,228 @@
+{% extends "_base.html" %}
+
+{% block title %}Inventory Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Inventory Dashboard</h2>
+        <a href="{{ url_for('products.manage_products') }}" class="btn btn-outline-secondary">
+            <i class="fas fa-boxes"></i> Manage Products
+        </a>
+    </div>
+
+    <!-- Inventory Summary Cards -->
+    <div class="row mb-4">
+        <div class="col-md-3 mb-3">
+            <div class="card bg-primary text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Products</h5>
+                    <h2 class="mb-0">{{ total_products }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-warning text-dark">
+                <div class="card-body">
+                    <h5 class="card-title">Low Stock</h5>
+                    <h2 class="mb-0">{{ low_stock_products|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-danger text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Out of Stock</h5>
+                    <h2 class="mb-0">{{ out_of_stock_products|length }}</h2>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3 mb-3">
+            <div class="card bg-success text-white">
+                <div class="card-body">
+                    <h5 class="card-title">Total Value</h5>
+                    <h2 class="mb-0">${{ "%.2f"|format(total_inventory_value) }}</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Low Stock Products -->
+    {% if low_stock_products %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">Low Stock Products</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Current Stock</th>
+                            <th>Reorder Level</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in low_stock_products %}
+                        <tr>
+                            <td>{{ product.name }}</td>
+                            <td>{{ product.current_stock }} units</td>
+                            <td>{{ product.reorder_level }} units</td>
+                            <td><span class="badge bg-warning">Low Stock</span></td>
+                            <td>
+                                <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-warehouse"></i> View Inventory
+                                </a>
+                                <a href="{{ url_for('products.adjust_stock', product_id=product.id) }}" class="btn btn-sm btn-primary">
+                                    <i class="fas fa-plus"></i> Add Stock
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- All Products Inventory -->
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">All Products</h5>
+            <div>
+                <input type="text" id="productSearch" class="form-control form-control-sm" placeholder="Search products...">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover" id="productsTable">
+                    <thead>
+                        <tr>
+                            <th>Product</th>
+                            <th>Current Stock</th>
+                            <th>Reorder Level</th>
+                            <th>Status</th>
+                            <th>Value</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for product in products %}
+                        <tr>
+                            <td>
+                                <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="text-decoration-none">
+                                    {{ product.name }}
+                                </a>
+                            </td>
+                            <td>{{ product.current_stock }} units</td>
+                            <td>{{ product.reorder_level }} units</td>
+                            <td>
+                                {% if product.current_stock <= 0 %}
+                                    <span class="badge bg-danger">Out of Stock</span>
+                                {% elif product.current_stock <= product.reorder_level %}
+                                    <span class="badge bg-warning">Low Stock</span>
+                                {% else %}
+                                    <span class="badge bg-success">In Stock</span>
+                                {% endif %}
+                            </td>
+                            <td>${{ "%.2f"|format(product.current_stock * product.cogs_per_unit) }}</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-primary" title="View Inventory">
+                                        <i class="fas fa-warehouse"></i>
+                                    </a>
+                                    <a href="{{ url_for('products.adjust_stock', product_id=product.id) }}" class="btn btn-primary" title="Adjust Stock">
+                                        <i class="fas fa-plus"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Movements -->
+    {% if recent_movements %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Recent Inventory Movements</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Unit Cost</th>
+                            <th>Total Value</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for movement in recent_movements %}
+                        <tr>
+                            <td>{{ movement.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                            <td>
+                                <a href="{{ url_for('products.product_inventory', product_id=movement.product_id) }}">
+                                    {{ movement.product.name }}
+                                </a>
+                            </td>
+                            <td>
+                                <span class="badge {% if movement.quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ movement.movement_type|replace('_', ' ')|title }}
+                                </span>
+                            </td>
+                            <td>{{ movement.quantity|abs }}</td>
+                            <td>${{ "%.2f"|format(movement.unit_cost) }}</td>
+                            <td>${{ "%.2f"|format(movement.quantity * movement.unit_cost) }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+    // Add search functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        const searchInput = document.getElementById('productSearch');
+        const table = document.getElementById('productsTable');
+        const rows = table.getElementsByTagName('tr');
+
+        searchInput.addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            
+            for (let i = 1; i < rows.length; i++) {
+                const row = rows[i];
+                const cells = row.getElementsByTagName('td');
+                let rowMatches = false;
+                
+                for (let j = 0; j < cells.length; j++) {
+                    const cell = cells[j];
+                    if (cell.textContent.toLowerCase().includes(searchText)) {
+                        rowMatches = true;
+                        break;
+                    }
+                }
+                
+                row.style.display = rowMatches ? '' : 'none';
+            }
+        });
+    });
+</script>
+{% endblock %}
+
+{% endblock %}

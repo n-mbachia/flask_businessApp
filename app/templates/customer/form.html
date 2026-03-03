@@ -1,0 +1,257 @@
+<!-- app/templates/customer/form.html -->
+{% extends "_base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4 py-4">
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">{{ title }}</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" id="customerForm" class="needs-validation" novalidate>
+                        {{ form.hidden_tag() }}
+                        
+                        <!-- Customer Information -->
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                {{ form.name.label(class="form-label fw-semibold") }}
+                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), 
+                                             placeholder="John Doe", required=true, 
+                                             pattern=".{2,}", title="Name must be at least 2 characters") }}
+                                {% if form.name.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.name.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="invalid-feedback">Please enter a valid name (at least 2 characters).</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.email.label(class="form-label fw-semibold") }}
+                                <div class="input-group has-validation">
+                                    <span class="input-group-text">@</span>
+                                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), 
+                                                 placeholder="customer@example.com", type="email",
+                                                 pattern="[^\s@]+@[^\s@]+\.[^\s@]+", title="Enter a valid email address") }}
+                                </div>
+                                {% if form.email.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.email.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="invalid-feedback">Please enter a valid email address.</div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                {{ form.phone.label(class="form-label fw-semibold") }}
+                                {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), 
+                                             placeholder="+1 (555) 123-4567",
+                                             pattern="^[\d\s\-\+\(\)]{10,}$", title="Enter a valid phone number") }}
+                                {% if form.phone.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.phone.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% else %}
+                                    <div class="invalid-feedback">Please enter a valid phone number.</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-6">
+                                {{ form.company.label(class="form-label fw-semibold") }}
+                                {{ form.company(class="form-control" + (" is-invalid" if form.company.errors else ""), 
+                                             placeholder="Acme Inc.") }}
+                                {% if form.company.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.company.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Address Information -->
+                        <div class="mb-3">
+                            {{ form.address.label(class="form-label fw-semibold") }}
+                            {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), 
+                                         placeholder="123 Main St") }}
+                            {% if form.address.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.address.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.address2.label(class="form-label fw-semibold") }}
+                            {{ form.address2(class="form-control" + (" is-invalid" if form.address2.errors else ""), 
+                                         placeholder="Apt 4B") }}
+                            {% if form.address2.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.address2.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                {{ form.city.label(class="form-label fw-semibold") }}
+                                {{ form.city(class="form-control" + (" is-invalid" if form.city.errors else ""), 
+                                         placeholder="New York") }}
+                                {% if form.city.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.city.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.state.label(class="form-label fw-semibold") }}
+                                {{ form.state(class="form-control" + (" is-invalid" if form.state.errors else ""), 
+                                         placeholder="NY") }}
+                                {% if form.state.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.state.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                {{ form.postal_code.label(class="form-label fw-semibold") }}
+                                {{ form.postal_code(class="form-control" + (" is-invalid" if form.postal_code.errors else ""), 
+                                                 placeholder="10001") }}
+                                {% if form.postal_code.errors %}
+                                    <div class="invalid-feedback">
+                                        {% for error in form.postal_code.errors %}
+                                            <div>{{ error }}</div>
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.country.label(class="form-label fw-semibold") }}
+                            {{ form.country(class="form-control" + (" is-invalid" if form.country.errors else ""), 
+                                         placeholder="United States") }}
+                            {% if form.country.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.country.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.tax_id.label(class="form-label fw-semibold") }}
+                            {{ form.tax_id(class="form-control" + (" is-invalid" if form.tax_id.errors else ""), 
+                                         placeholder="123-45-6789") }}
+                            {% if form.tax_id.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.tax_id.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.notes.label(class="form-label fw-semibold") }}
+                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), 
+                                         rows="3", placeholder="Additional notes...") }}
+                            {% if form.notes.errors %}
+                                <div class="invalid-feedback">
+                                    {% for error in form.notes.errors %}
+                                        <div>{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('customer.index') }}" class="btn btn-outline-secondary">
+                                <i class="fas fa-times me-1"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                                <span class="btn-text"><i class="fas fa-save me-1"></i> {{ form.submit.label.text }}</span>
+                            </button>
+                        </div>
+                        {% if request.args.get('next') %}
+                            <input type="hidden" name="next" value="{{ request.args.get('next') }}">
+                        {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Stats Sidebar -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Quick Stats</h6>
+                </div>
+                <div class="card-body">
+                    {% if customer %}
+                    <div class="mb-3">
+                        <small class="text-muted">Customer Since</small>
+                        <div class="fw-bold">{{ customer.created_at.strftime('%B %d, %Y') if customer.created_at else 'N/A' }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Total Orders</small>
+                        <div class="fw-bold">{{ customer.get_order_count() }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <small class="text-muted">Total Spent</small>
+                        <div class="fw-bold">${{ "%.2f"|format(customer.get_total_spent()) }}</div>
+                    </div>
+                    <div>
+                        <small class="text-muted">Status</small>
+                        <div>
+                            {% if customer.is_active %}
+                                <span class="badge bg-success">Active</span>
+                            {% else %}
+                                <span class="badge bg-secondary">Inactive</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center text-muted py-3">
+                        <i class="fas fa-user-plus fa-3x mb-3"></i>
+                        <p>New Customer</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Toast Container for notifications -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="{{ url_for('static', filename='js/pages/customer-form.js') }}"></script>
+{% endblock %}

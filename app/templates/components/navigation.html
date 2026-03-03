@@ -1,0 +1,216 @@
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Main navigation" role="navigation">
+    <div class="container">
+        <!-- Brand/logo -->
+        <a class="navbar-brand" href="{{ url_for('main.index') }}" aria-label="Home" tabindex="0">
+            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" height="40" class="d-inline-block align-text-top">
+        </a>
+        
+        <!-- Mobile menu button -->
+        <button class="navbar-toggler" type="button" 
+            data-bs-toggle="collapse" 
+            data-bs-target="#mainNavbar" 
+            aria-controls="mainNavbar" 
+            aria-expanded="false" 
+            aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Navigation links -->
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav me-auto mb-2 mb-lg-0" role="menubar">
+                <li class="nav-item" role="none">
+                    <a class="nav-link{% if request.endpoint == 'storefront.catalog' %} active{% endif %}" 
+                        href="{{ url_for('storefront.catalog') }}"
+                        {% if request.endpoint == 'storefront.catalog' %}aria-current="page"{% endif %} role="menuitem">
+                        <i class="bi bi-shop me-1" aria-hidden="true"></i>Storefront
+                    </a>
+                </li>
+
+                {% if current_user.is_authenticated %}
+                    <!-- Dashboard -->
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint == 'main.dashboard' %} active{% endif %}" 
+                            href="{{ url_for('main.dashboard') }}"
+                            {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %} role="menuitem">
+                            <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Dashboard
+                        </a>
+                    </li>
+
+                    <!-- Analytics -->
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint == 'analytics.analytics' %} active{% endif %}" 
+                            href="{{ url_for('analytics.analytics') }}"
+                            {% if request.endpoint == 'analytics.analytics' %}aria-current="page"{% endif %} role="menuitem">
+                            <i class="bi bi-graph-up me-1" aria-hidden="true"></i>Analytics
+                        </a>
+                    </li>
+
+                    <!-- Orders -->
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint.startswith('orders.') %} active{% endif %}" 
+                            href="{{ url_for('orders.index') }}"
+                            {% if request.endpoint.startswith('orders.') %}aria-current="page"{% endif %} role="menuitem">
+                            <i class="bi bi-receipt me-1" aria-hidden="true"></i>Orders
+                        </a>
+                    </li>
+
+                    <!-- Inventory Dropdown -->
+                    <li class="nav-item dropdown" role="none">
+                        {% set is_inventory_active = request.endpoint and (
+                            request.endpoint.startswith('products.') or 
+                            'inventory' in request.endpoint or 
+                            'product' in request.endpoint
+                        ) %}
+                        <a class="nav-link dropdown-toggle{% if is_inventory_active %} active{% endif %}" 
+                            href="#" 
+                            id="inventoryDropdown" 
+                            role="button" 
+                            data-bs-toggle="dropdown" 
+                            data-bs-auto-close="outside"
+                            aria-expanded="false"
+                            aria-haspopup="true"
+                            tabindex="0">
+                            <i class="bi bi-box-seam me-1" aria-hidden="true"></i>Inventory
+                            {% if is_inventory_active %}<span class="visually-hidden">(current)</span>{% endif %}
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="inventoryDropdown" role="menu">
+                            <li role="none">
+                                <a class="dropdown-item{% if request.endpoint == 'products.manage_products' %} active{% endif %}" 
+                                    href="{{ url_for('products.manage_products') }}"
+                                    {% if request.endpoint == 'products.manage_products' %}aria-current="page"{% endif %} role="menuitem">
+                                    <i class="bi bi-box-seam me-2" aria-hidden="true"></i>Manage Products
+                                </a>
+                            </li>
+                            <li role="none">
+                                <a class="dropdown-item{% if request.endpoint == 'products.inventory_dashboard' %} active{% endif %}" 
+                                    href="{{ url_for('products.inventory_dashboard') }}"
+                                    {% if request.endpoint == 'products.inventory_dashboard' %}aria-current="page"{% endif %} role="menuitem">
+                                    <i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Inventory Dashboard
+                                </a>
+                            </li>
+
+                            {% set has_products = products is defined and products.items and products.items|length > 0 %}
+
+                            <li role="none">
+                                <a class="dropdown-item{% if request.endpoint == 'products.product_analytics_dashboard' %} active{% endif %}" 
+                                    href="{% if has_products %}{{ url_for('products.product_analytics_dashboard', product_id=products.items[0].id) }}{% else %}#{% endif %}"
+                                    {% if not has_products %}disabled{% endif %}
+                                    {% if request.endpoint == 'products.product_analytics_dashboard' %}aria-current="page"{% endif %} role="menuitem">
+                                    <i class="bi bi-graph-up me-2" aria-hidden="true"></i>Analytics Dashboard
+                                    {% if not has_products %}
+                                        <span class="small text-muted ms-2">(No products)</span>
+                                    {% endif %}
+                                </a>
+                            </li>
+
+                            {% if has_products %}
+                                <li><hr class="dropdown-divider"></li>
+                                <li><h6 class="dropdown-header" tabindex="0">Quick Access</h6></li>
+                                {% for product in products.items %}
+                                    {% set is_product_active = request.endpoint in ['products.product_inventory', 'products.adjust_stock'] and 
+                                                           (product.id ~ '') in request.path %}
+                                    <li role="none">
+                                        <a class="dropdown-item d-flex justify-content-between align-items-center{% if is_product_active %} active{% endif %}" 
+                                            href="{{ url_for('products.product_inventory', product_id=product.id) }}"
+                                            {% if is_product_active %}aria-current="page"{% endif %} role="menuitem">
+                                            <span class="text-truncate" style="max-width: 200px;" title="{{ product.name }}">
+                                                {{ product.name }}
+                                            </span>
+                                            {% if product.current_stock is defined %}
+                                                {% if product.current_stock <= 0 %}
+                                                    <span class="badge bg-danger ms-2" title="Out of stock">Out</span>
+                                                {% elif product.reorder_level is defined and product.current_stock <= product.reorder_level %}
+                                                    <span class="badge bg-warning text-dark ms-2" title="Low stock">Low</span>
+                                                {% endif %}
+                                            {% endif %}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            {% endif %}
+                        </ul>
+                    </li>
+
+                    <!-- Costs -->
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint == 'costs.manage_costs' %} active{% endif %}" 
+                            href="{{ url_for('costs.manage_costs') }}"
+                            {% if request.endpoint == 'costs.manage_costs' %}aria-current="page"{% endif %} role="menuitem">
+                            <i class="bi bi-currency-dollar me-1" aria-hidden="true"></i>Costs
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+            
+            <!-- Right-aligned navigation items -->
+            <ul class="navbar-nav ms-auto" role="menubar">
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint == 'storefront.pending_products' %} active{% endif %}" 
+                           href="{{ url_for('storefront.pending_products') }}" role="menuitem">
+                            <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Review Products
+                        </a>
+                    </li>
+                {% endif %}
+                {% if current_user.is_authenticated %}
+                    <!-- User Dropdown -->
+                    <li class="nav-item dropdown" role="none">
+                                <a class="nav-link dropdown-toggle d-flex align-items-center" 
+                                    href="#" 
+                                    id="userDropdown" 
+                                    role="button" 
+                                    data-bs-toggle="dropdown" 
+                                    data-bs-auto-close="outside"
+                                    aria-expanded="false"
+                                    aria-haspopup="true"
+                                    tabindex="0">
+                            <i class="bi bi-person-circle me-1" aria-hidden="true"></i>
+                            <span class="d-none d-md-inline">{{ current_user.username }}</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown" role="menu">
+                            <li role="none">
+                                <a class="dropdown-item" href="{{ url_for('auth.profile') }}" role="menuitem">
+                                    <i class="bi bi-person me-2" aria-hidden="true"></i>Profile
+                                </a>
+                            </li>
+                            <li role="none">
+                                <a class="dropdown-item" href="{{ url_for('auth.settings') }}" role="menuitem">
+                                    <i class="bi bi-gear me-2" aria-hidden="true"></i>Settings
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li role="none">
+                                <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}" role="menuitem">
+                                    <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Logout
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                {% else %}
+                    <!-- Login/Signup Buttons -->
+                    <li class="nav-item" role="none">
+                        <a class="nav-link{% if request.endpoint == 'auth.login' %} active" aria-current="page"{% endif %}" 
+                           href="{{ url_for('auth.login') }}" role="menuitem">
+                            Login
+                        </a>
+                    </li>
+                    <li class="nav-item" role="none">
+                        <a class="nav-link btn btn-outline-light btn-sm ms-2" 
+                           href="{{ url_for('auth.register') }}" role="menuitem">
+                            Sign Up
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Loading Overlay -->
+<div class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-none" id="loadingOverlay" style="z-index: 1090;" aria-hidden="true">
+    <div class="position-absolute top-50 start-50 translate-middle text-center">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <p class="text-white mt-2">Processing...</p>
+    </div>
+</div>

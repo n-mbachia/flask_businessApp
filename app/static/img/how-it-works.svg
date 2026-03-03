@@ -1,0 +1,36 @@
+<svg width="600" height="400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#667eea;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#764ba2;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <rect width="600" height="400" fill="#f8f9fa"/>
+  <circle cx="100" cy="100" r="40" fill="url(#grad2)" opacity="0.2"/>
+  <circle cx="100" cy="100" r="25" fill="url(#grad2)"/>
+  <text x="100" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white" font-weight="bold">1</text>
+  <text x="100" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#667eea">Create Account</text>
+  
+  <circle cx="300" cy="100" r="40" fill="url(#grad2)" opacity="0.2"/>
+  <circle cx="300" cy="100" r="25" fill="url(#grad2)"/>
+  <text x="300" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white" font-weight="bold">2</text>
+  <text x="300" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#667eea">Connect Data</text>
+  
+  <circle cx="500" cy="100" r="40" fill="url(#grad2)" opacity="0.2"/>
+  <circle cx="500" cy="100" r="25" fill="url(#grad2)"/>
+  <text x="500" y="105" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" fill="white" font-weight="bold">3</text>
+  <text x="500" y="160" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#667eea">Gain Insights</text>
+  
+  <path d="M 140 100 L 260 100" stroke="#667eea" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  <path d="M 340 100 L 460 100" stroke="#667eea" stroke-width="3" fill="none" marker-end="url(#arrowhead)"/>
+  
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <polygon points="0 0, 10 3.5, 0 7" fill="#667eea"/>
+    </marker>
+  </defs>
+  
+  <rect x="50" y="250" width="500" height="100" rx="10" fill="white" stroke="#e9ecef" stroke-width="2"/>
+  <text x="300" y="290" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" fill="#667eea" font-weight="bold">How It Works</text>
+  <text x="300" y="320" text-anchor="middle" font-family="Arial, sans-serif" font-size="14" fill="#6c757d">Simple 3-step process to get started</text>
+</svg>

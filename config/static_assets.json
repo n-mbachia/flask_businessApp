@@ -1,0 +1,76 @@
+{
+  "assets": {
+    "version": "1.0.0",
+    "cache": {
+      "enabled": true,
+      "max_age": 31536000,
+      "s_maxage": 31536000,
+      "public": true,
+      "immutable": true
+    },
+    "bundle": {
+      "js": {
+        "minify": true,
+        "sourcemaps": true,
+        "target": "es2015"
+      },
+      "css": {
+        "minify": true,
+        "sourcemaps": true,
+        "autoprefixer": {
+          "browsers": ["> 1%", "last 2 versions"],
+          "cascade": true
+        }
+      },
+      "images": {
+        "formats": ["webp", "jpg"],
+        "sizes": [
+          {"suffix": "@1x", "width": 480},
+          {"suffix": "@2x", "width": 768},
+          {"suffix": "@3x", "width": 1200}
+        ],
+        "quality": 85
+      }
+    },
+    "paths": {
+      "sources": {
+        "js": "js",
+        "css": "css",
+        "images": "img",
+        "fonts": "fonts"
+      },
+      "destinations": {
+        "development": {
+          "js": "js",
+          "css": "css",
+          "images": "img",
+          "fonts": "fonts"
+        },
+        "production": {
+          "js": "dist/js",
+          "css": "dist/css",
+          "images": "dist/img",
+          "fonts": "dist/fonts"
+        }
+      }
+    },
+    "cdn": {
+      "enabled": false,
+      "url": "https://cdn.yourdomain.com",
+      "directories": ["dist"]
+    },
+    "features": {
+      "critical_css": true,
+      "lazy_loading": true,
+      "responsive_images": true,
+      "webp_support": true
+    },
+    "build": {
+      "clean_before_build": true,
+      "hash_filenames": true,
+      "generate_manifest": true,
+      "brotli_compression": true,
+      "gzip_compression": true
+    }
+  }
+}

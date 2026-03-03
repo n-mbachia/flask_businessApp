@@ -1,0 +1,91 @@
+<div class="modal-dialog modal-lg">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title">
+                {% if form.id.data %}
+                    <i class="fas fa-edit text-primary me-2"></i>Edit Order Item
+                {% else %}
+                    <i class="fas fa-plus-circle text-success me-2"></i>Add Item to Order
+                {% endif %}
+            </h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <form method="POST" action="{{ action }}" id="orderItemForm" novalidate data-product-search-url="{{ url_for('products.search') }}">
+            {{ form.hidden_tag() }}
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            {{ form.product_id.label(class="form-label fw-semibold") }}
+                            {{ form.product_id(class="form-select" + (' is-invalid' if form.product_id.errors else '')) }}
+                            {% for error in form.product_id.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                            <div class="form-text">Search for a product by name or SKU</div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            {{ form.quantity.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <button class="btn btn-outline-secondary" type="button" onclick="this.nextElementSibling.stepDown()">-</button>
+                                {{ form.quantity(class="form-control text-center" + (' is-invalid' if form.quantity.errors else ''), min="1") }}
+                                <button class="btn btn-outline-secondary" type="button" onclick="this.previousElementSibling.stepUp()">+</button>
+                            </div>
+                            {% for error in form.quantity.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            {{ form.unit_price.label(class="form-label fw-semibold") }}
+                            <div class="input-group">
+                                <span class="input-group-text">{{ order.currency if order else '$' }}</span>
+                                {{ form.unit_price(class="form-control" + (' is-invalid' if form.unit_price.errors else ''), 
+                                    placeholder="Auto-filled from product") }}
+                            </div>
+                            {% for error in form.unit_price.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label class="form-label fw-semibold">Subtotal</label>
+                            <div class="input-group">
+                                <span class="input-group-text">{{ order.currency if order else '$' }}</span>
+                                <input type="text" class="form-control bg-light" id="subtotal" value="0.00" readonly>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-12">
+                        <div class="form-group mb-0">
+                            {{ form.notes.label(class="form-label fw-semibold") }}
+                            {{ form.notes(class="form-control" + (' is-invalid' if form.notes.errors else ''), 
+                                rows="2", placeholder="Any special instructions or notes") }}
+                            {% for error in form.notes.errors %}
+                                <div class="invalid-feedback d-block">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-check me-1"></i> {{ 'Update' if form.id.data else 'Add' }} Item
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Include external JavaScript -->
+<script src="{{ url_for('static', filename='js/pages/orders/item-form.js') }}"></script>
