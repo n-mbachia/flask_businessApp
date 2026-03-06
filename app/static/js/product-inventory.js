@@ -10,12 +10,13 @@ class ProductInventoryManager {
         this.filterSelect = document.getElementById('movementFilter');
         this.table = document.getElementById('movementsTable');
         this.toastContainer = document.getElementById('toastContainer');
+        this.canEdit = config.canEdit || false;
+        this.canDelete = config.canDelete || false;
     }
 
     init() {
         this.initChart();
         this.initSearchFilter();
-        this.initTooltips();
         this.attachRowEvents();
     }
 
@@ -68,22 +69,19 @@ class ProductInventoryManager {
         this.filterSelect.addEventListener('change', filter);
     }
 
-    initTooltips() {
-        document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-            if (!el._tooltip) new bootstrap.Tooltip(el);
-        });
-    }
-
     attachRowEvents() {
         // Any additional row‑specific event handlers
     }
 
     addMovement() {
-        // Placeholder – open modal or redirect to add movement page
         window.location.href = `/products/${this.productId}/adjust-stock`;
     }
 
     editField(movementId, field) {
+        if (!this.canEdit) {
+            this.showToast('You do not have permission to edit.', 'warning');
+            return;
+        }
         const cell = document.querySelector(`tr[data-movement-id="${movementId}"] .editable-cell[data-field="${field}"]`);
         if (!cell) return;
 
@@ -91,12 +89,11 @@ class ProductInventoryManager {
         const input = document.createElement('input');
         input.type = field === 'quantity' ? 'number' : 'text';
         input.value = field === 'unit_cost' ? currentValue.replace('$', '') : currentValue;
-        input.className = 'form-control form-control-sm';
+        input.className = 'w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
         input.style.width = '100%';
 
         const save = () => {
             const newValue = input.value;
-            // Call API to update
             fetch(`/api/inventory/movements/${movementId}`, {
                 method: 'PUT',
                 headers: {
@@ -110,8 +107,12 @@ class ProductInventoryManager {
                 if (data.success) {
                     // Update cell content
                     cell.innerHTML = `<span class="editable-value">${field === 'unit_cost' ? '$' + parseFloat(newValue).toFixed(2) : newValue}</span>`;
-                    if (currentUserCanEdit) {
-                        cell.insertAdjacentHTML('beforeend', `<button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField(${movementId}, '${field}')"><i class="fas fa-edit"></i></button>`);
+                    if (this.canEdit) {
+                        const editBtn = document.createElement('button');
+                        editBtn.className = 'ml-1 text-blue-600 hover:text-blue-800';
+                        editBtn.setAttribute('onclick', `inventoryManager.editField(${movementId}, '${field}')`);
+                        editBtn.innerHTML = '<i class="fas fa-edit"></i>';
+                        cell.appendChild(editBtn);
                     }
                     this.showToast('Updated successfully.', 'success');
                 } else {
@@ -130,6 +131,10 @@ class ProductInventoryManager {
     }
 
     deleteMovement(movementId) {
+        if (!this.canDelete) {
+            this.showToast('You do not have permission to delete.', 'warning');
+            return;
+        }
         if (!confirm('Are you sure you want to delete this movement? This action cannot be undone.')) return;
         fetch(`/api/inventory/movements/${movementId}`, {
             method: 'DELETE',
@@ -148,7 +153,7 @@ class ProductInventoryManager {
     }
 
     viewDetails(movementId) {
-        // Open modal with details (could fetch from API)
+        // Open modal with details – could be implemented later
         alert(`View details for movement ${movementId} – implement as needed.`);
     }
 
@@ -179,24 +184,29 @@ class ProductInventoryManager {
     }
 
     showToast(message, type = 'success') {
-        if (!this.toastContainer) return;
-        const id = 'toast-' + Date.now();
-        const toastEl = document.createElement('div');
-        toastEl.id = id;
-        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-        toastEl.setAttribute('role', 'alert');
-        toastEl.setAttribute('aria-live', 'assertive');
-        toastEl.setAttribute('aria-atomic', 'true');
-        toastEl.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">${message}</div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
-        `;
-        this.toastContainer.appendChild(toastEl);
-        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
-        toast.show();
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
+            document.body.appendChild(container);
+        }
+        const toastId = 'toast-' + Date.now();
+        const typeClasses = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        }[type] || 'bg-gray-500';
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${typeClasses}`;
+        toast.textContent = message;
+        container.appendChild(toast);
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     debounce(func, wait) {

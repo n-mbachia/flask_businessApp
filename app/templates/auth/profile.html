@@ -1,65 +1,158 @@
 {% extends "_base.html" %}
-
-{% block title %}Profile - Profitability App{% endblock %}
+{% block title %}Profile & Settings - Profitability App{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">My Profile</h5>
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-light">
-                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-                        </a>
-                    </div>
+<div class="py-10">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <!-- Page Header -->
+        <div class="mb-6 flex items-center justify-between">
+            <h1 class="text-2xl font-bold text-gray-900">Profile & Settings</h1>
+            <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-blue-700 bg-blue-100 hover:bg-blue-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <i data-lucide="arrow-left" class="w-4 h-4 mr-2"></i> Dashboard
+            </a>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Profile Information Card -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 bg-blue-600 text-white">
+                    <h3 class="text-lg leading-6 font-medium">Profile Information</h3>
+                    <p class="mt-1 text-sm text-blue-100">Update your personal details and password</p>
                 </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('auth.profile') }}">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-3">
-                            <label for="username" class="form-label">Username</label>
-                            <input type="text" class="form-control" id="username" name="username" 
-                                   value="{{ current_user.username }}" required>
+                <div class="border-t border-gray-200">
+                    <form method="POST" action="{{ url_for('auth.profile') }}" class="px-4 py-5 sm:p-6">
+                        {{ profile_form.hidden_tag() }}
+
+                        <!-- Username -->
+                        <div class="mb-4">
+                            <label for="{{ profile_form.username.id }}" class="block text-sm font-medium text-gray-700">{{ profile_form.username.label.text }}</label>
+                            {{ profile_form.username(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                            {% if profile_form.username.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ profile_form.username.errors[0] }}</p>
+                            {% endif %}
                         </div>
-                        
-                        <div class="mb-3">
-                            <label for="email" class="form-label">Email address</label>
-                            <input type="email" class="form-control" id="email" name="email"
-                                   value="{{ current_user.email }}" required>
+
+                        <!-- Email -->
+                        <div class="mb-4">
+                            <label for="{{ profile_form.email.id }}" class="block text-sm font-medium text-gray-700">{{ profile_form.email.label.text }}</label>
+                            {{ profile_form.email(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                            {% if profile_form.email.errors %}
+                                <p class="text-red-500 text-xs mt-1">{{ profile_form.email.errors[0] }}</p>
+                            {% endif %}
                         </div>
-                        
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <h6 class="mb-0">Change Password</h6>
-                                <small class="text-muted">Leave blank to keep current password</small>
-                            </div>
-                            <div class="card-body">
-                                <div class="mb-3">
-                                    <label for="new_password" class="form-label">New Password</label>
-                                    <input type="password" class="form-control" id="new_password" name="new_password">
+
+                        <!-- Password Change Section -->
+                        <div class="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+                            <h4 class="text-md font-medium text-gray-900">Change Password</h4>
+                            <p class="text-sm text-gray-500 mb-3">Leave blank to keep current password</p>
+                            <div class="grid grid-cols-1 gap-y-4 sm:grid-cols-2 sm:gap-x-4">
+                                <div>
+                                    <label for="{{ profile_form.new_password.id }}" class="block text-sm font-medium text-gray-700">{{ profile_form.new_password.label.text }}</label>
+                                    {{ profile_form.new_password(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                                    {% if profile_form.new_password.errors %}
+                                        <p class="text-red-500 text-xs mt-1">{{ profile_form.new_password.errors[0] }}</p>
+                                    {% endif %}
                                 </div>
-                                <div class="mb-0">
-                                    <label for="confirm_password" class="form-label">Confirm New Password</label>
-                                    <input type="password" class="form-control" id="confirm_password" name="confirm_password">
+                                <div>
+                                    <label for="{{ profile_form.confirm_password.id }}" class="block text-sm font-medium text-gray-700">{{ profile_form.confirm_password.label.text }}</label>
+                                    {{ profile_form.confirm_password(class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                                    {% if profile_form.confirm_password.errors %}
+                                        <p class="text-red-500 text-xs mt-1">{{ profile_form.confirm_password.errors[0] }}</p>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-save me-1"></i> Save Changes
+
+                        <div class="flex justify-end">
+                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i data-lucide="save" class="w-4 h-4 mr-2"></i> Update Profile
                             </button>
                         </div>
                     </form>
                 </div>
-                <div class="card-footer text-muted small">
-                    <div class="d-flex justify-content-between">
-                        <span>Member since: {{ current_user.created_at.strftime('%B %d, %Y') }}</span>
-                        <span>Last login: {{ current_user.last_login.strftime('%B %d, %Y %H:%M') if current_user.last_login else 'Never' }}</span>
-                    </div>
+                <div class="border-t border-gray-200 px-4 py-4 sm:px-6 bg-gray-50 text-sm text-gray-500 flex justify-between">
+                    <span>Member since: {{ current_user.created_at.strftime('%B %d, %Y') }}</span>
+                    <span>Last login: {{ current_user.last_login.strftime('%B %d, %Y %H:%M') if current_user.last_login else 'Never' }}</span>
+                </div>
+            </div>
+
+            <!-- Account Settings Card -->
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 bg-gray-800 text-white">
+                    <h3 class="text-lg leading-6 font-medium">Account Settings</h3>
+                    <p class="mt-1 text-sm text-gray-300">Customize your preferences and business settings</p>
+                </div>
+                <div class="border-t border-gray-200">
+                    <form method="POST" action="{{ url_for('auth.profile') }}" class="px-4 py-5 sm:p-6 space-y-6">
+                        {{ settings_form.hidden_tag() }}
+
+                        <!-- Notification Preferences -->
+                        <fieldset>
+                            <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Notification Preferences</legend>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        {{ settings_form.email_notifications(class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded") }}
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        {{ settings_form.email_notifications.label(class="font-medium text-gray-700") }}
+                                        <p class="text-gray-500">Receive email notifications for important updates</p>
+                                    </div>
+                                </div>
+                                <div class="flex items-start">
+                                    <div class="flex items-center h-5">
+                                        {{ settings_form.low_stock_alerts(class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded") }}
+                                    </div>
+                                    <div class="ml-3 text-sm">
+                                        {{ settings_form.low_stock_alerts.label(class="font-medium text-gray-700") }}
+                                        <p class="text-gray-500">Get notified when stock is running low</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Display Settings -->
+                        <fieldset>
+                            <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Display Settings</legend>
+                            <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="{{ settings_form.items_per_page.id }}" class="block text-sm font-medium text-gray-700">{{ settings_form.items_per_page.label.text }}</label>
+                                    {{ settings_form.items_per_page(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                                </div>
+                                <div>
+                                    <label for="{{ settings_form.theme.id }}" class="block text-sm font-medium text-gray-700">{{ settings_form.theme.label.text }}</label>
+                                    {{ settings_form.theme(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <!-- Business Settings -->
+                        <fieldset>
+                            <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Business Settings</legend>
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="{{ settings_form.threshold.id }}" class="block text-sm font-medium text-gray-700">{{ settings_form.threshold.label.text }}</label>
+                                    <div class="mt-1 flex rounded-md shadow-sm">
+                                        {{ settings_form.threshold(class="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                                        <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">items</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-gray-500">Get alerts when stock falls below this number</p>
+                                </div>
+                                <div>
+                                    <label for="{{ settings_form.currency.id }}" class="block text-sm font-medium text-gray-700">{{ settings_form.currency.label.text }}</label>
+                                    {{ settings_form.currency(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                                </div>
+                            </div>
+                        </fieldset>
+
+                        <div class="flex justify-end">
+                            {{ settings_form.submit(class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-800 hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500") }}
+                        </div>
+                    </form>
+                </div>
+                <div class="border-t border-gray-200 px-4 py-4 sm:px-6 bg-gray-50 text-sm text-gray-500 flex justify-between">
+                    <span>Last updated: {{ current_user.updated_at.strftime('%B %d, %Y %H:%M') if current_user.updated_at else 'Never' }}</span>
+                    <span>&nbsp;</span>
                 </div>
             </div>
         </div>
@@ -68,25 +161,51 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Password validation for profile form -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.querySelector('form');
-    const newPassword = document.getElementById('new_password');
-    const confirmPassword = document.getElementById('confirm_password');
-    
-    form.addEventListener('submit', function(e) {
-        if (newPassword.value !== confirmPassword.value) {
-            e.preventDefault();
-            alert('Passwords do not match!');
-            return false;
+    const newPassword = document.getElementById('{{ profile_form.new_password.id }}');
+    const confirmPassword = document.getElementById('{{ profile_form.confirm_password.id }}');
+    const profileForm = document.querySelector('form[action="{{ url_for('auth.profile') }}"]');
+
+    if (profileForm && newPassword && confirmPassword) {
+        profileForm.addEventListener('submit', function(e) {
+            if (newPassword.value || confirmPassword.value) {
+                if (newPassword.value !== confirmPassword.value) {
+                    e.preventDefault();
+                    alert('Passwords do not match!');
+                    return false;
+                }
+                if (newPassword.value.length > 0 && newPassword.value.length < 8) {
+                    e.preventDefault();
+                    alert('Password must be at least 8 characters long!');
+                    return false;
+                }
+            }
+        });
+    }
+
+    // Theme switcher (for settings form)
+    const themeSelect = document.getElementById('{{ settings_form.theme.id }}');
+    if (themeSelect) {
+        const currentTheme = '{{ current_theme }}';
+        if (currentTheme === 'system') {
+            const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            document.documentElement.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
+        } else {
+            document.documentElement.setAttribute('data-bs-theme', currentTheme);
         }
-        
-        if (newPassword.value && newPassword.value.length < 8) {
-            e.preventDefault();
-            alert('Password must be at least 8 characters long!');
-            return false;
-        }
-    });
+
+        themeSelect.addEventListener('change', function() {
+            const theme = this.value;
+            if (theme === 'system') {
+                const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                document.documentElement.setAttribute('data-bs-theme', prefersDark ? 'dark' : 'light');
+            } else {
+                document.documentElement.setAttribute('data-bs-theme', theme);
+            }
+        });
+    }
 });
 </script>
 {% endblock %}

@@ -1,204 +1,152 @@
 {% extends "_base.html" %}
 
-{% block title %}Marketplace Access & Guest Shopping | Profitability App{% endblock %}
+{% block title %}Vendor Onboarding & Profitability Console | Profitability App{% endblock %}
 
 {% block head %}
 {{ super() }}
-<link rel="preload" href="{{ url_for('static', filename='css/landing.css') }}" as="style">
-<link href="{{ url_for('static', filename='css/landing.css') }}" rel="stylesheet">
-<meta name="description" content="Shop curated vendor goods as a guest, sign in for exclusive deals, and manage storefront performance from one modern console.">
-<meta name="keywords" content="vendor portal, guest shop, ecommerce, profitability, store dashboard">
+<meta name="description" content="Launch, manage, and grow your storefront with guided onboarding, promotion controls, and real‑time profitability tracking—all in one place.">
+<meta name="keywords" content="vendor onboarding, vendor portal, ecommerce operations, profitability dashboard, flash sales, inventory management">
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="website">
+<meta property="og:url" content="{{ request.url_root }}">
+<meta property="og:title" content="Vendor Onboarding & Profitability Console">
+<meta property="og:description" content="Launch, manage, and grow your storefront with guided onboarding, promotion controls, and real‑time profitability tracking—all in one place.">
+<meta property="og:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
+<!-- Twitter -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Vendor Onboarding & Profitability Console">
+<meta name="twitter:description" content="Launch, manage, and grow your storefront with guided onboarding, promotion controls, and real‑time profitability tracking—all in one place.">
+<meta name="twitter:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
+<!-- Schema.org markup -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": "WebPage",
-  "name": "Business App Marketplace",
-  "url": "{{ request.url_root }}",
-  "description": "Shop curated vendor goods as a guest, sign in for exclusive deals, and manage storefront performance from one modern console.",
-  "mainEntity": {
-    "@type": "Organization",
-    "name": "Profitability App",
-    "url": "{{ request.url_root }}",
-    "logo": "{{ url_for('static', filename='img/favicon.ico', _external=True) }}"
+  "@type": "Product",
+  "name": "Profitability App Vendor Platform",
+  "description": "All‑in‑one vendor portal for onboarding, promotions, and profitability tracking.",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD",
+    "availability": "https://schema.org/OnlineOnly"
   }
 }
 </script>
 {% endblock %}
 
 {% block content %}
-<div class="landing-page">
-    <section class="hero-splash" aria-labelledby="hero-title">
-        <div class="container hero-grid">
-            <div class="hero-copy">
-                <p class="eyebrow">Marketplace + Profitability Console</p>
-                <h1 id="hero-title">Shop curated vendor goods or sign in to unlock exclusive discounted offers.</h1>
-                <p class="lead">Browse the storefront as a guest and enjoy fast checkout, or authenticate to reveal real-time deals, loyalty pricing, and vendor dashboard controls. We keep every SKU, margin, and order traceable behind a single secure roof.</p>
-                <div class="hero-actions">
-                    <a href="{{ url_for('storefront.catalog') }}" class="btn btn-hero btn-lg">Shop as Guest</a>
-                    <a href="{{ url_for('auth.login') }}" class="btn btn-outline-hero btn-lg">Sign In for Exclusive Deals</a>
-                </div>
-                <div class="hero-meta">
-                    <span>Safe checkout</span>
-                    <span>Curated vendors</span>
-                    <span>Instant analytics</span>
-                </div>
-            </div>
-            <div class="hero-panel" role="region" aria-label="Sign in options">
-                <div class="panel-card">
-                    <div class="panel-header">
-                        <h2>Sign in now</h2>
-                        <p>Choose the experience that fits you.</p>
+<div class="bg-white">
+    <!-- Hero Section -->
+    <section class="relative bg-gradient-to-br from-gray-900 via-gray-800 to-blue-900 text-white overflow-hidden">
+        <div class="absolute inset-0 bg-black opacity-50"></div>
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28">
+            <div class="lg:flex lg:items-center lg:justify-between lg:gap-12">
+                <div class="lg:w-1/2">
+                    <p class="text-sm font-semibold uppercase tracking-wider text-blue-300">Vendor Onboarding + Profitability Console</p>
+                    <h1 class="mt-2 text-4xl font-extrabold tracking-tight sm:text-5xl md:text-6xl">
+                        Launch, manage, and grow <span class="text-blue-400">your storefront</span> from one place.
+                    </h1>
+                    <p class="mt-6 text-xl text-gray-300">
+                        This platform gives vendors one workflow for product onboarding, promotion controls, and profitability tracking. Publish catalog‑ready listings, monitor margin impact, and manage flash sales without switching tools.
+                    </p>
+                    <div class="mt-10 flex flex-wrap gap-4">
+                        <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" 
+                        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md shadow-sm text-gray-900 bg-white hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-sign-in-alt mr-2"></i> Open Vendor Portal
+                        </a>
+                        <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" 
+                        class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-user-tie mr-2"></i> Sign In as Vendor
+                        </a>
+                        <a href="{{ url_for('auth.register') }}" 
+                        class="inline-flex items-center px-6 py-3 border border-gray-600 text-base font-medium rounded-md text-gray-200 hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                            <i class="fas fa-user-plus mr-2"></i> Request Vendor Access
+                        </a>
                     </div>
-                    <div class="panel-buttons">
-                        <a href="{{ url_for('auth.login') }}" class="btn btn-secondary">User / Shopper Portal</a>
-                        <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" class="btn btn-dark">Vendor Portal</a>
-                    </div>
-                    <p class="panel-note">Vendors new to the platform can <a href="{{ url_for('auth.register') }}">request access</a> and begin submitting products for approval.</p>
                 </div>
-                <div class="panel-burst">
-                    <p class="burst-label">Member benefits</p>
-                    <ul>
-                        <li>Extra loyalty points</li>
-                        <li>Volume pricing</li>
-                        <li>Early access to drops</li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section id="stats" class="stats-section py-5" aria-label="Marketplace performance">
-        <div class="container stat-grid">
-            <article class="stat-card">
-                <p class="stat-label">Active vendors</p>
-                <p class="stat-value">120+</p>
-                <p class="stat-foot">Curated and vetted in real time</p>
-            </article>
-            <article class="stat-card">
-                <p class="stat-label">Orders processed</p>
-                <p class="stat-value growth-count">150k+</p>
-                <p class="stat-foot">Across guest and signed-in shoppers</p>
-            </article>
-            <article class="stat-card">
-                <p class="stat-label">Exclusive deals unlocked</p>
-                <p class="stat-value discount-count">72%</p>
-                <p class="stat-foot">Members save more with targeted offers</p>
-            </article>
-        </div>
-    </section>
-
-    <section id="features" class="feature-section py-5" aria-label="Core experiences">
-        <div class="container">
-            <div class="section-heading">
-                <p class="eyebrow">Modern storefront stack</p>
-                <h2>Everything shoppers and vendors need</h2>
-                <p class="lead text-muted">Reliable performance tracking, curated catalog discovery, and automated onboarding keep your supply chain moving.</p>
-            </div>
-            <div class="feature-grid">
-                <article class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-speedometer2"></i>
-                    </div>
-                    <h3>Real-time insights</h3>
-                    <p>View revenue, margins, and spend per vendor or storefront without toggling between tools.</p>
-                </article>
-                <article class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-shop"></i>
-                    </div>
-                    <h3>Guest-friendly storefront</h3>
-                    <p>Minimal barriers: no account required, transparent inventory, and a secure checkout for first-time buyers.</p>
-                </article>
-                <article class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-box-seam"></i>
-                    </div>
-                    <h3>Vendor automation</h3>
-                    <p>Vendors submit products, pricing, and imagery; admins approve, publish, and publish with full traceability.</p>
-                </article>
-                <article class="feature-card">
-                    <div class="feature-icon">
-                        <i class="bi bi-patch-check"></i>
-                    </div>
-                    <h3>Exclusive deals</h3>
-                    <p>Members unlock volume pricing, early drops, and loyalty savings tailored to past behavior.</p>
-                </article>
-            </div>
-        </div>
-    </section>
-
-    <section id="guest-offers" class="offer-section py-5 bg-surface" aria-label="Guest and member offers">
-        <div class="container offer-grid">
-            <div class="offer-card">
-                <h3>Shop as a guest</h3>
-                <p>Start exploring products instantly. No registration, no fees—just click, add to cart, and checkout in seconds.</p>
-                <div class="offer-actions">
-                    <a href="{{ url_for('storefront.catalog') }}" class="btn btn-hero btn-sm">Browse catalog</a>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-outline-hero btn-sm">Create an account later</a>
-                </div>
-            </div>
-            <div class="offer-card highlight">
-                <h3>Signed-in shoppers</h3>
-                <p>Enjoy personalized discounts, saved carts, and early access to vendor drops. Unlock loyalty pricing and dedicated customer support.</p>
-                <a href="{{ url_for('auth.login') }}" class="btn btn-secondary btn-sm">Sign in for deals</a>
-            </div>
-        </div>
-    </section>
-
-    <section id="vendor-onboarding" class="vendor-section py-5" aria-label="Vendor onboarding">
-        <div class="container">
-            <div class="vendor-grid">
-                <div class="vendor-text">
-                    <p class="eyebrow">Vendor-ready platform</p>
-                    <h2>Submit products, manage inventory, and get paid fast.</h2>
-                    <p>New vendor? Complete onboarding with guided prompts. Existing vendors see live demand, profitability buckets, and fulfillment status in one dashboard.</p>
-                    <ul class="vendor-list">
-                        <li>Step-by-step submission with validation and imagery previews.</li>
-                        <li>Inventory alerts, automated reorder suggestions, and margin visibility.</li>
-                        <li>Connect payout accounts and review approval status in seconds.</li>
-                    </ul>
-                    <a href="{{ url_for('auth.register') }}" class="btn btn-dark btn-md">Request vendor access</a>
-                </div>
-                <div class="vendor-visual">
-                    <div class="vendor-panel">
-                        <p class="vendor-label">Vendor portal highlights</p>
-                        <ul>
-                            <li>Dashboard with SKU-level insights</li>
-                            <li>Approval timeline and messaging</li>
-                            <li>Quick list of exclusive deals</li>
+                <div class="mt-12 lg:mt-0 lg:w-1/2">
+                    <div class="bg-white/10 backdrop-blur-lg rounded-2xl p-8 border border-white/20">
+                        <h3 class="text-2xl font-bold text-white">Vendor portal highlights</h3>
+                        <ul class="mt-6 space-y-4">
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-green-400 mt-1 mr-3"></i>
+                                <span class="text-gray-200">Guided SKU onboarding and approval status tracking</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-green-400 mt-1 mr-3"></i>
+                                <span class="text-gray-200">Promotion and flash‑sale controls with promo code support</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-check-circle text-green-400 mt-1 mr-3"></i>
+                                <span class="text-gray-200">Inventory and margin visibility tied to every order</span>
+                            </li>
                         </ul>
-                        <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" class="btn btn-outline-hero btn-sm">Go to vendor portal</a>
+                        <div class="mt-8 flex justify-between">
+                            <span class="text-sm text-gray-400">✓ Guided onboarding</span>
+                            <span class="text-sm text-gray-400">✓ Promotion controls</span>
+                            <span class="text-sm text-gray-400">✓ Instant analytics</span>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="cta-banner py-5" aria-label="Final call to action">
-        <div class="container text-center">
-            <h2>Ready to shop or grow with our marketplace?</h2>
-            <p class="lead">Guest shoppers get instant access, while registered users and vendors enjoy the full suite of profitability tools and exclusive deals.</p>
-            <div class="hero-actions justify-content-center">
-                <a href="{{ url_for('storefront.catalog') }}" class="btn btn-hero btn-lg">Shop as Guest</a>
-                <a href="{{ url_for('auth.login') }}" class="btn btn-outline-hero btn-lg">Sign In</a>
+    <!-- Features Grid -->
+    <section class="py-16 bg-gray-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center">
+                <h2 class="text-3xl font-extrabold text-gray-900 sm:text-4xl">Everything you need to succeed as a vendor</h2>
+                <p class="mt-4 max-w-2xl mx-auto text-xl text-gray-500">One integrated platform for product management, promotions, and profitability.</p>
+            </div>
+            <div class="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                    <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-boxes"></i></div>
+                    <h3 class="text-xl font-bold text-gray-900">Product Onboarding</h3>
+                    <p class="mt-2 text-gray-600">Submit SKUs, track approval status, and manage catalog listings with ease.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                    <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-tags"></i></div>
+                    <h3 class="text-xl font-bold text-gray-900">Promotion Controls</h3>
+                    <p class="mt-2 text-gray-600">Create flash sales, generate promo codes, and set discount rules—all with margin impact preview.</p>
+                </div>
+                <div class="bg-white rounded-xl shadow-md p-6 border border-gray-200">
+                    <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-chart-line"></i></div>
+                    <h3 class="text-xl font-bold text-gray-900">Profitability Tracking</h3>
+                    <p class="mt-2 text-gray-600">See real‑time margin per order, inventory levels, and revenue metrics tied to your products.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Banner -->
+    <section class="bg-blue-600">
+        <div class="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:py-16 lg:px-8 lg:flex lg:items-center lg:justify-between">
+            <h2 class="text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+                <span class="block">Ready to onboard and scale?</span>
+                <span class="block text-blue-200">Start your vendor journey today.</span>
+            </h2>
+            <div class="mt-8 flex lg:mt-0 lg:flex-shrink-0">
+                <a href="{{ url_for('auth.register') }}" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-blue-600 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-user-plus mr-2"></i> Request Vendor Access
+                </a>
+                <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" class="ml-3 inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-800 hover:bg-blue-900 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </a>
             </div>
         </div>
     </section>
 </div>
 
-<script src="{{ url_for('static', filename='js/landing.js') }}"></script>
+<!-- Smooth scroll for anchor links (if any) -->
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    if (window.LandingPage) {
-        window.LandingPage.init();
-    }
-
     document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         anchor.addEventListener('click', function (e) {
             const href = this.getAttribute('href');
             const target = document.querySelector(href);
-            e.preventDefault();
             if (target) {
+                e.preventDefault();
                 target.scrollIntoView({ behavior: 'smooth', block: 'start' });
             }
         });

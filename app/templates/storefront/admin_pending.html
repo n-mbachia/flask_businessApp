@@ -3,48 +3,47 @@
 {% block title %}Pending Storefront Products{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
         <div>
-            <h1 class="h3 mb-0">Pending Products</h1>
-            <p class="text-muted">Approve vendor submissions before they are publicly visible.</p>
+            <h1 class="text-2xl font-bold text-gray-900">Pending Products</h1>
+            <p class="text-gray-500">Approve vendor submissions before they are publicly visible.</p>
         </div>
-        <a class="btn btn-outline-secondary" href="{{ url_for('storefront.manage_vendors') }}">
-            <i class="bi bi-people-fill me-1"></i>Vendor Roster
+        <a href="{{ url_for('storefront.manage_vendors') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+            <i data-lucide="users" class="w-4 h-4 mr-1"></i> Vendor Roster
         </a>
     </div>
 
     {% if products %}
-        <div class="row g-4">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             {% for product in products %}
-            <div class="col-md-6">
-                <div class="card shadow-sm border-0">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
-                            <h2 class="h5 mb-0">{{ product.name }}</h2>
-                            <span class="badge bg-warning text-dark">Pending</span>
-                        </div>
-                        <p class="text-muted mb-2">{{ product.category }}</p>
-                        <p class="text-muted small mb-3">{{ product.description|default('No description provided') }}</p>
-                        <dl class="row small mb-3">
-                            <dt class="col-5">Vendor</dt>
-                            <dd class="col-7">{{ product.user.username if product.user else 'Unknown' }}</dd>
-                            <dt class="col-5">Price</dt>
-                            <dd class="col-7">${{ "%0.2f"|format(product.selling_price_per_unit) }}</dd>
-                        </dl>
-                        <form method="POST" action="{{ url_for('storefront.approve_product', product_id=product.id) }}">
-                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                            <button type="submit" class="btn btn-success btn-sm w-100">
-                                <i class="bi bi-check-circle me-1"></i>Approve Product
-                            </button>
-                        </form>
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-2">
+                        <h2 class="text-lg font-semibold text-gray-900">{{ product.name }}</h2>
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pending</span>
                     </div>
+                    <p class="text-sm text-gray-500 mb-2">{{ product.category }}</p>
+                    <p class="text-sm text-gray-600 mb-4">{{ product.description|default('No description provided') }}</p>
+                    <dl class="grid grid-cols-2 gap-2 text-sm mb-4">
+                        <dt class="text-gray-500">Vendor:</dt>
+                        <dd class="text-gray-900">{{ product.user.username if product.user else 'Unknown' }}</dd>
+                        <dt class="text-gray-500">Price:</dt>
+                        <dd class="text-gray-900">${{ "%0.2f"|format(product.selling_price_per_unit) }}</dd>
+                    </dl>
+                    <form method="POST" action="{{ url_for('storefront.approve_product', product_id=product.id) }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                            <i data-lucide="check-circle" class="w-4 h-4 mr-1"></i> Approve Product
+                        </button>
+                    </form>
                 </div>
             </div>
             {% endfor %}
         </div>
     {% else %}
-        <div class="alert alert-info">
+        <div class="bg-blue-50 border border-blue-200 text-blue-800 rounded-md p-4">
+            <i data-lucide="info" class="w-4 h-4 mr-2"></i>
             No pending storefront products at this time.
         </div>
     {% endif %}

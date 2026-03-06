@@ -9,7 +9,7 @@
     const submitBtn = document.getElementById('submitBtn');
     const toastContainer = document.getElementById('toastContainer');
 
-    // Validation patterns
+    // Validation patterns (same as before)
     const patterns = {
         name: /^.{2,}$/,
         email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
@@ -25,46 +25,84 @@
         };
     }
 
-    // Show toast notification
+    // Show toast notification (same as in customers.js)
     function showToast(message, type = 'success', title = null) {
         if (!toastContainer) return;
+
         const id = 'toast-' + Date.now();
         const toastEl = document.createElement('div');
         toastEl.id = id;
-        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-        toastEl.setAttribute('role', 'alert');
-        toastEl.setAttribute('aria-live', 'assertive');
-        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.className = `px-4 py-3 rounded-lg shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 max-w-sm w-full`;
+        if (type === 'success') toastEl.classList.add('bg-green-500');
+        else if (type === 'danger') toastEl.classList.add('bg-red-500');
+        else if (type === 'warning') toastEl.classList.add('bg-yellow-500');
+        else if (type === 'info') toastEl.classList.add('bg-blue-500');
+        else toastEl.classList.add('bg-gray-800');
+
         toastEl.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
+            <div class="flex items-start">
+                <div class="flex-1">
                     ${title ? `<strong>${title}</strong> ` : ''}${message}
                 </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+                <button class="ml-4 text-white hover:text-gray-200 focus:outline-none" onclick="this.parentElement.parentElement.remove()">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         `;
         toastContainer.appendChild(toastEl);
-        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
-        toast.show();
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+
+        setTimeout(() => {
+            toastEl.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toastEl.remove(), 300);
+        }, 3000);
     }
 
-    // Validate a single field
+    // Validate a single field (custom, not using Bootstrap)
     function validateField(field) {
         const value = field.value.trim();
         const fieldName = field.name;
         const pattern = patterns[fieldName];
+        let valid = true;
+        let message = '';
 
         if (field.hasAttribute('required') && value === '') {
-            field.setCustomValidity('This field is required');
+            valid = false;
+            message = 'This field is required.';
         } else if (pattern && value && !pattern.test(value)) {
-            field.setCustomValidity('Invalid format');
-        } else {
-            field.setCustomValidity('');
+            valid = false;
+            message = 'Invalid format.';
         }
 
-        // Trigger Bootstrap validation style
-        field.classList.toggle('is-invalid', !field.checkValidity());
+        // Toggle error styling
+        if (!valid) {
+            field.classList.add('border-red-300', 'focus:ring-red-500', 'focus:border-red-500');
+            field.classList.remove('border-gray-300');
+            // Show validation message if present
+            const msgEl = document.querySelector(`.validation-message[data-field="${fieldName}"]`);
+            if (msgEl) {
+                msgEl.classList.remove('hidden');
+                msgEl.textContent = message || msgEl.textContent;
+            }
+        } else {
+            field.classList.remove('border-red-300', 'focus:ring-red-500', 'focus:border-red-500');
+            field.classList.add('border-gray-300');
+            const msgEl = document.querySelector(`.validation-message[data-field="${fieldName}"]`);
+            if (msgEl) {
+                msgEl.classList.add('hidden');
+            }
+        }
+
+        return valid;
+    }
+
+    // Validate all fields
+    function validateForm() {
+        const inputs = form.querySelectorAll('input, textarea, select');
+        let isValid = true;
+        inputs.forEach(input => {
+            if (!validateField(input)) isValid = false;
+        });
+        return isValid;
     }
 
     // Setup real-time validation
@@ -78,7 +116,7 @@
 
         // Prevent form submission if invalid
         form.addEventListener('submit', function(e) {
-            if (!form.checkValidity()) {
+            if (!validateForm()) {
                 e.preventDefault();
                 e.stopPropagation();
                 showToast('Please correct the errors in the form.', 'warning', 'Validation Error');
@@ -86,11 +124,10 @@
                 // Show loading state
                 const spinner = submitBtn.querySelector('.spinner-border');
                 const btnText = submitBtn.querySelector('.btn-text');
-                if (spinner) spinner.classList.remove('d-none');
-                if (btnText) btnText.classList.add('d-none');
+                if (spinner) spinner.classList.remove('hidden');
+                if (btnText) btnText.classList.add('hidden');
                 submitBtn.disabled = true;
             }
-            form.classList.add('was-validated');
         });
     }
 
@@ -99,13 +136,6 @@
         if (!form) return;
         initValidation();
 
-        // If there are flashed messages (server-side), show them as toasts
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    showToast({{ message|tojson }}, {{ category|tojson }});
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        // Flash messages are rendered server-side through the base template alerts.
     });
 })();

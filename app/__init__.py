@@ -24,6 +24,7 @@ from sqlalchemy import text
 from flask_wtf.csrf import CSRFProtect
 from flask_cors import CORS
 from config import Config
+from .assets import ensure_tailwind_built
 try:
     from flask_socketio import SocketIO
     _HAS_FLASK_SOCKETIO = True
@@ -285,3 +286,8 @@ def register_cli_commands(app):
             admin.set_password(password)
             db.session.commit()
             click.echo(f'Updated admin user {username} with vendor privileges')
+
+    @app.cli.command('tailwind-build')
+    def tailwind_build():
+        """Compile the Tailwind/PostCSS stylesheet."""
+        ensure_tailwind_built(force=True)

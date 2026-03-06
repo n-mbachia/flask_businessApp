@@ -1,19 +1,12 @@
 {% extends "errors/base_error.html" %}
 
-{% block title %}403 - Access Denied{% endblock %}
-
-{% block content %}
-    <div class="error-code">403</div>
-    <h1 class="error-message">Access Denied</h1>
-    <p class="lead">The vendor portal is restricted to approved sellers and administrators.</p>
-    <p class="text-muted mb-3">
-        If your account should have vendor privileges, ask an administrator to promote your user or
-        reach out to <a href="mailto:support@profitabilityapp.com" class="text-decoration-underline">support@profitabilityapp.com</a>
-        for assistance.
-    </p>
-    <div class="d-flex gap-2">
-        <a href="mailto:support@profitabilityapp.com?subject=Vendor%20Access%20Request" class="btn btn-outline-secondary">
-            Request vendor access
-        </a>
-    </div>
+{% block error_title %}403 - Access Denied{% endblock %}
+{% block error_code %}403{% endblock %}
+{% block error_heading %}Access Denied{% endblock %}
+{% block error_description %}This area is reserved for approved vendors and administrators only.{% endblock %}
+{% block error_details %}If your account should include vendor privileges, reach out through the email below and we will review your request.{% endblock %}
+{% block error_actions %}
+    <a href="mailto:support@profitabilityapp.com?subject=Vendor%20Access%20Request" class="inline-flex items-center justify-center px-4 py-2 rounded-full border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50 transition">
+        Request vendor access
+    </a>
 {% endblock %}

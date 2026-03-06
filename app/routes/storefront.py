@@ -65,7 +65,31 @@ def catalog():
         per_page=per_page,
         error_out=False
     )
-    return render_template('storefront/catalog.html', products=products)
+    flash_sale = _build_flash_sale_offer(products.items)
+    return render_template('storefront/catalog.html', products=products, flash_sale=flash_sale)
+
+
+def _build_flash_sale_offer(items):
+    """Select one product to feature in the flash sale card."""
+    candidates = [p for p in items if getattr(p, 'is_active', False) and getattr(p, 'is_approved', False) and p.selling_price_per_unit]
+    if not candidates:
+        return None
+
+    candidate = max(candidates, key=lambda p: float(p.selling_price_per_unit or 0))
+    base_price = float(candidate.selling_price_per_unit or 0)
+    discount_percent = 15 if candidate.quantity_available >= 20 else 10
+    sale_price = max(base_price * (1 - discount_percent / 100), 0.0)
+    promo_code = f"FLASH{candidate.id:04d}"
+
+    return {
+        'title': candidate.name,
+        'category': candidate.category,
+        'vendor': candidate.user.username if candidate.user else 'Vendor',
+        'original_price': f"{base_price:.2f}",
+        'sale_price': f"{sale_price:.2f}",
+        'discount_percent': discount_percent,
+        'promo_code': promo_code
+    }
 
 
 @storefront_bp.route('/storefront/checkout', methods=['POST'])

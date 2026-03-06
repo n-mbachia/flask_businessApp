@@ -34,32 +34,58 @@ class ProductAnalyticsDashboard {
     async initializeCharts() {
         // Revenue & Profit Trend
         await this.createRevenueTrendChart();
-        
+
         // Cost Breakdown
         await this.createCostBreakdownChart();
-        
+
         // Additional overview charts
         await this.createSalesPerformanceChart();
         await this.createProfitMarginsChart();
-        
-        // Initialize tab-specific charts when tabs are shown
+
+        // Tab-specific charts are initialized when tab is shown (via setupTabChartInitialization)
         this.setupTabChartInitialization();
+    }
+
+    /**
+     * Setup tab chart initialization (using Alpine's activeTab)
+     */
+    setupTabChartInitialization() {
+        // Since tabs are now controlled by Alpine, we can check visibility on demand.
+        // We'll add a small interval or rely on the fact that when user clicks a tab,
+        // the Alpine data changes and we can listen for that. But for simplicity,
+        // we'll check if the tab content is visible when the user interacts.
+        // Alternatively, we can dispatch custom events from Alpine when tabs change.
+        // Here we'll use a MutationObserver to detect when hidden tabs become visible.
+        const observer = new MutationObserver(() => {
+            if (document.getElementById('lots')?.classList.contains('block')) {
+                this.initializeLotAnalyticsCharts();
+            }
+            if (document.getElementById('inventory')?.classList.contains('block')) {
+                this.initializeInventoryCharts();
+            }
+            if (document.getElementById('forecasts')?.classList.contains('block')) {
+                this.initializeForecastCharts();
+            }
+        });
+        observer.observe(document.getElementById('lots'), { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.getElementById('inventory'), { attributes: true, attributeFilter: ['class'] });
+        observer.observe(document.getElementById('forecasts'), { attributes: true, attributeFilter: ['class'] });
     }
 
     /**
      * Create Revenue & Profit Trend Chart
      */
     async createRevenueTrendChart() {
-        const ctx = document.getElementById('revenueTrend');
-        if (!ctx) return;
-        
+        const canvas = document.getElementById('revenueTrend');
+        if (!canvas) return;
+
         this.showLoadingState('revenueTrend');
-        
+
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/revenue-trend?period=${this.currentPeriod}`);
             const data = await response.json();
-            
-            this.charts.revenueTrend = new Chart(ctx.getContext('2d'), {
+
+            this.charts.revenueTrend = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: data.labels,
@@ -95,14 +121,14 @@ class ProductAnalyticsDashboard {
      * Create Cost Breakdown Chart
      */
     async createCostBreakdownChart() {
-        const ctx = document.getElementById('costBreakdown');
-        if (!ctx) return;
-        
+        const canvas = document.getElementById('costBreakdown');
+        if (!canvas) return;
+
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/cost-breakdown?period=${this.currentPeriod}`);
             const data = await response.json();
-            
-            this.charts.costBreakdown = new Chart(ctx.getContext('2d'), {
+
+            this.charts.costBreakdown = new Chart(canvas.getContext('2d'), {
                 type: 'doughnut',
                 data: {
                     labels: data.labels,
@@ -137,14 +163,14 @@ class ProductAnalyticsDashboard {
      * Create Sales Performance Chart
      */
     async createSalesPerformanceChart() {
-        const ctx = document.getElementById('salesPerformance');
-        if (!ctx) return;
-        
+        const canvas = document.getElementById('salesPerformance');
+        if (!canvas) return;
+
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/sales-performance?period=${this.currentPeriod}`);
             const data = await response.json();
-            
-            this.charts.salesPerformance = new Chart(ctx.getContext('2d'), {
+
+            this.charts.salesPerformance = new Chart(canvas.getContext('2d'), {
                 type: 'bar',
                 data: {
                     labels: data.labels,
@@ -167,14 +193,14 @@ class ProductAnalyticsDashboard {
      * Create Profit Margins Chart
      */
     async createProfitMarginsChart() {
-        const ctx = document.getElementById('profitMargins');
-        if (!ctx) return;
-        
+        const canvas = document.getElementById('profitMargins');
+        if (!canvas) return;
+
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/profit-margins?period=${this.currentPeriod}`);
             const data = await response.json();
-            
-            this.charts.profitMargins = new Chart(ctx.getContext('2d'), {
+
+            this.charts.profitMargins = new Chart(canvas.getContext('2d'), {
                 type: 'line',
                 data: {
                     labels: data.labels,
@@ -202,45 +228,15 @@ class ProductAnalyticsDashboard {
     }
 
     /**
-     * Setup tab chart initialization
-     */
-    setupTabChartInitialization() {
-        // Lot Analytics Tab
-        const lotsTab = document.getElementById('lots-tab');
-        if (lotsTab) {
-            lotsTab.addEventListener('shown.bs.tab', () => {
-                this.initializeLotAnalyticsCharts();
-            });
-        }
-
-        // Inventory Tab
-        const inventoryTab = document.getElementById('inventory-tab');
-        if (inventoryTab) {
-            inventoryTab.addEventListener('shown.bs.tab', () => {
-                this.initializeInventoryCharts();
-            });
-        }
-
-        // Forecasts Tab
-        const forecastsTab = document.getElementById('forecasts-tab');
-        if (forecastsTab) {
-            forecastsTab.addEventListener('shown.bs.tab', () => {
-                this.initializeForecastCharts();
-            });
-        }
-    }
-
-    /**
-     * Initialize Lot Analytics Charts
+     * Initialize Lot Analytics Charts (only once)
      */
     async initializeLotAnalyticsCharts() {
-        if (this.charts.lotPerformance) return; // Already initialized
+        if (this.charts.lotPerformance) return;
 
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/lot-performance`);
             const data = await response.json();
 
-            // Lot Performance Chart
             const ctx1 = document.getElementById('lotPerformance');
             if (ctx1) {
                 this.charts.lotPerformance = new Chart(ctx1.getContext('2d'), {
@@ -252,14 +248,12 @@ class ProductAnalyticsDashboard {
                             data: data.sell_through_rates,
                             borderColor: 'rgba(54, 162, 235, 1)',
                             backgroundColor: 'rgba(54, 162, 235, 0.1)',
-                            yAxisID: 'y',
                             tension: 0.3
                         }, {
                             label: 'Gross Margin (%)',
                             data: data.gross_margins,
                             borderColor: 'rgba(75, 192, 192, 1)',
                             backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                            yAxisID: 'y',
                             tension: 0.3
                         }]
                     },
@@ -267,7 +261,6 @@ class ProductAnalyticsDashboard {
                 });
             }
 
-            // Growth Metrics Chart
             const ctx2 = document.getElementById('growthMetrics');
             if (ctx2) {
                 this.charts.growthMetrics = new Chart(ctx2.getContext('2d'), {
@@ -297,16 +290,15 @@ class ProductAnalyticsDashboard {
     }
 
     /**
-     * Initialize Inventory Charts
+     * Initialize Inventory Charts (only once)
      */
     async initializeInventoryCharts() {
-        if (this.charts.inventoryLevels) return; // Already initialized
+        if (this.charts.inventoryLevels) return;
 
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/inventory-levels`);
             const data = await response.json();
 
-            // Inventory Levels Chart
             const ctx1 = document.getElementById('inventoryLevels');
             if (ctx1) {
                 this.charts.inventoryLevels = new Chart(ctx1.getContext('2d'), {
@@ -331,7 +323,6 @@ class ProductAnalyticsDashboard {
                 });
             }
 
-            // Stock Status Chart
             const ctx2 = document.getElementById('stockStatus');
             if (ctx2) {
                 this.charts.stockStatus = new Chart(ctx2.getContext('2d'), {
@@ -356,16 +347,15 @@ class ProductAnalyticsDashboard {
     }
 
     /**
-     * Initialize Forecast Charts
+     * Initialize Forecast Charts (only once)
      */
     async initializeForecastCharts() {
-        if (this.charts.revenueForecast) return; // Already initialized
+        if (this.charts.revenueForecast) return;
 
         try {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/forecasts`);
             const data = await response.json();
 
-            // Revenue Forecast Chart
             const ctx1 = document.getElementById('revenueForecast');
             if (ctx1) {
                 this.charts.revenueForecast = new Chart(ctx1.getContext('2d'), {
@@ -391,7 +381,6 @@ class ProductAnalyticsDashboard {
                 });
             }
 
-            // Demand Forecast Chart
             const ctx2 = document.getElementById('demandForecast');
             if (ctx2) {
                 this.charts.demandForecast = new Chart(ctx2.getContext('2d'), {
@@ -421,24 +410,10 @@ class ProductAnalyticsDashboard {
         const baseOptions = {
             responsive: true,
             maintainAspectRatio: false,
-            interaction: {
-                mode: 'index',
-                intersect: false,
-            },
+            interaction: { mode: 'index', intersect: false },
             plugins: {
-                legend: {
-                    display: true,
-                    position: 'top'
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                    titleColor: '#fff',
-                    bodyColor: '#fff',
-                    borderColor: 'rgba(54, 162, 235, 1)',
-                    borderWidth: 1,
-                    padding: 12,
-                    displayColors: true
-                }
+                legend: { display: true, position: 'top' },
+                tooltip: { backgroundColor: 'rgba(0,0,0,0.8)' }
             }
         };
 
@@ -449,11 +424,7 @@ class ProductAnalyticsDashboard {
                     scales: {
                         y: {
                             beginAtZero: true,
-                            ticks: {
-                                callback: function(value) {
-                                    return '$' + value.toLocaleString();
-                                }
-                            }
+                            ticks: { callback: value => '$' + value.toLocaleString() }
                         }
                     },
                     plugins: {
@@ -461,13 +432,7 @@ class ProductAnalyticsDashboard {
                         tooltip: {
                             ...baseOptions.plugins.tooltip,
                             callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ' + 
-                                        context.parsed.y.toLocaleString('en-US', {
-                                            style: 'currency',
-                                            currency: 'USD'
-                                        });
-                                }
+                                label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toLocaleString('en-US', { style: 'currency', currency: 'USD' })
                             }
                         }
                     }
@@ -479,15 +444,7 @@ class ProductAnalyticsDashboard {
                         y: {
                             beginAtZero: true,
                             max: 100,
-                            ticks: {
-                                callback: function(value) {
-                                    return value + '%';
-                                }
-                            },
-                            title: {
-                                display: true,
-                                text: 'Percentage (%)'
-                            }
+                            ticks: { callback: value => value + '%' }
                         }
                     },
                     plugins: {
@@ -495,41 +452,22 @@ class ProductAnalyticsDashboard {
                         tooltip: {
                             ...baseOptions.plugins.tooltip,
                             callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
-                                }
+                                label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'
                             }
                         }
                     }
                 };
             case 'units':
-                return {
-                    ...baseOptions,
-                    scales: {
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                };
+                return baseOptions;
             case 'growth':
                 return {
                     ...baseOptions,
-                    scales: {
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Growth Percentage (%)'
-                            }
-                        }
-                    },
                     plugins: {
                         ...baseOptions.plugins,
                         tooltip: {
                             ...baseOptions.plugins.tooltip,
                             callbacks: {
-                                label: function(context) {
-                                    return context.dataset.label + ': ' + context.parsed.y.toFixed(1) + '%';
-                                }
+                                label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + '%'
                             }
                         }
                     }
@@ -547,16 +485,13 @@ class ProductAnalyticsDashboard {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                },
+                legend: { position: 'bottom' },
                 tooltip: {
                     callbacks: {
-                        label: function(context) {
-                            const label = context.label || '';
-                            const value = '$' + context.parsed.toLocaleString();
-                            const percentage = ((context.parsed / context.dataset.data.reduce((a, b) => a + b, 0)) * 100).toFixed(1);
-                            return label + ': ' + value + ' (' + percentage + '%)';
+                        label: ctx => {
+                            const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = ((ctx.parsed / total) * 100).toFixed(1);
+                            return ctx.label + ': $' + ctx.parsed.toLocaleString() + ' (' + percentage + '%)';
                         }
                     }
                 }
@@ -572,9 +507,7 @@ class ProductAnalyticsDashboard {
             responsive: true,
             maintainAspectRatio: false,
             plugins: {
-                legend: {
-                    position: 'bottom'
-                }
+                legend: { position: 'bottom' }
             }
         };
     }
@@ -583,16 +516,12 @@ class ProductAnalyticsDashboard {
      * Setup event listeners
      */
     setupEventListeners() {
-        // Refresh button
         const refreshBtn = document.querySelector('.refresh-btn');
         if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                this.refreshDashboard();
-            });
+            refreshBtn.addEventListener('click', () => this.refreshDashboard());
         }
 
-        // Period selector
-        const dropdownItems = document.querySelectorAll('.period-selector .dropdown-item');
+        const dropdownItems = document.querySelectorAll('.period-selector a');
         dropdownItems.forEach(item => {
             item.addEventListener('click', (e) => {
                 e.preventDefault();
@@ -606,25 +535,17 @@ class ProductAnalyticsDashboard {
      * Setup period selector
      */
     setupPeriodSelector() {
-        // Set current period display
         const periodText = this.getPeriodText(this.currentPeriod);
-        const currentPeriodElement = document.getElementById('currentPeriod');
-        if (currentPeriodElement) {
-            currentPeriodElement.textContent = periodText;
-        }
+        const el = document.getElementById('currentPeriod');
+        if (el) el.textContent = periodText;
     }
 
     /**
      * Get period text
      */
     getPeriodText(days) {
-        switch(days) {
-            case 7: return 'Last 7 Days';
-            case 30: return 'Last 30 Days';
-            case 90: return 'Last 90 Days';
-            case 365: return 'Last Year';
-            default: return `Last ${days} Days`;
-        }
+        const map = { 7: 'Last 7 Days', 30: 'Last 30 Days', 90: 'Last 90 Days', 365: 'Last Year' };
+        return map[days] || `Last ${days} Days`;
     }
 
     /**
@@ -632,28 +553,18 @@ class ProductAnalyticsDashboard {
      */
     async changePeriod(days) {
         this.currentPeriod = days;
-        
-        const currentPeriodElement = document.getElementById('currentPeriod');
-        if (currentPeriodElement) {
-            currentPeriodElement.textContent = this.getPeriodText(days);
-        }
-        
-        // Show loading state
+        const el = document.getElementById('currentPeriod');
+        if (el) el.textContent = this.getPeriodText(days);
+
         this.showLoadingState();
-        
         try {
-            // Refresh all charts with new period
             await this.refreshAllCharts();
-            
-            // Update metrics
             await this.updateMetrics();
-            
             this.showNotification('Period updated successfully', 'success');
         } catch (error) {
             console.error('Error changing period:', error);
             this.showNotification('Error updating period', 'error');
         } finally {
-            // Hide loading state
             this.hideLoadingState();
         }
     }
@@ -662,22 +573,17 @@ class ProductAnalyticsDashboard {
      * Refresh dashboard
      */
     async refreshDashboard() {
-        const refreshBtn = document.querySelector('.refresh-btn');
-        if (refreshBtn) {
-            refreshBtn.classList.add('spinning');
-        }
-        
+        const btn = document.querySelector('.refresh-btn i');
+        btn?.classList.add('fa-spin');
         try {
             await this.refreshAllCharts();
             await this.updateMetrics();
-            this.showNotification('Dashboard refreshed successfully', 'success');
+            this.showNotification('Dashboard refreshed', 'success');
         } catch (error) {
             console.error('Error refreshing dashboard:', error);
-            this.showNotification('Error refreshing dashboard', 'error');
+            this.showNotification('Error refreshing', 'error');
         } finally {
-            if (refreshBtn) {
-                refreshBtn.classList.remove('spinning');
-            }
+            btn?.classList.remove('fa-spin');
         }
     }
 
@@ -685,13 +591,8 @@ class ProductAnalyticsDashboard {
      * Refresh all charts
      */
     async refreshAllCharts() {
-        // Destroy existing charts
-        Object.values(this.charts).forEach(chart => {
-            if (chart) chart.destroy();
-        });
+        Object.values(this.charts).forEach(chart => chart?.destroy());
         this.charts = {};
-
-        // Reinitialize charts
         await this.initializeCharts();
     }
 
@@ -703,12 +604,10 @@ class ProductAnalyticsDashboard {
             const response = await this.fetchWithTimeout(`/api/v1/products/${this.productId}/analytics/metrics?period=${this.currentPeriod}`);
             const data = await response.json();
 
-            // Update metric displays
             this.updateMetricDisplay('revenueMetric', data.revenue, '$');
             this.updateMetricDisplay('profitMetric', data.net_profit, '$');
             this.updateMetricDisplay('marginMetric', data.net_margin, '%');
             this.updateMetricDisplay('unitsMetric', data.units_sold, '');
-
         } catch (error) {
             console.error('Error updating metrics:', error);
         }
@@ -717,16 +616,15 @@ class ProductAnalyticsDashboard {
     /**
      * Update metric display
      */
-    updateMetricDisplay(elementId, value, prefix) {
-        const element = document.getElementById(elementId);
-        if (element) {
-            if (prefix === '$') {
-                element.textContent = prefix + value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-            } else if (prefix === '%') {
-                element.textContent = value.toFixed(1) + prefix;
-            } else {
-                element.textContent = value.toLocaleString();
-            }
+    updateMetricDisplay(id, value, prefix) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (prefix === '$') {
+            el.textContent = '$' + value.toFixed(2);
+        } else if (prefix === '%') {
+            el.textContent = value.toFixed(1) + '%';
+        } else {
+            el.textContent = value.toLocaleString();
         }
     }
 
@@ -734,42 +632,23 @@ class ProductAnalyticsDashboard {
      * Start real-time updates
      */
     startRealTimeUpdates() {
-        // Update metrics every 30 seconds
-        this.refreshInterval = setInterval(async () => {
-            await this.updateMetrics();
-        }, 30000);
+        this.refreshInterval = setInterval(() => this.updateMetrics(), 30000);
     }
 
     /**
-     * Show loading state
+     * Show loading state for a chart
      */
     showLoadingState(chartId) {
-        if (chartId) {
-            const overlay = document.getElementById(chartId + 'Loading');
-            if (overlay) {
-                overlay.classList.remove('d-none');
-            }
-        } else {
-            document.querySelectorAll('.loading-overlay').forEach(overlay => {
-                overlay.classList.remove('d-none');
-            });
-        }
+        const overlay = document.getElementById(chartId + 'Loading');
+        if (overlay) overlay.classList.remove('hidden');
     }
 
     /**
-     * Hide loading state
+     * Hide loading state for a chart
      */
     hideLoadingState(chartId) {
-        if (chartId) {
-            const overlay = document.getElementById(chartId + 'Loading');
-            if (overlay) {
-                overlay.classList.add('d-none');
-            }
-        } else {
-            document.querySelectorAll('.loading-overlay').forEach(overlay => {
-                overlay.classList.add('d-none');
-            });
-        }
+        const overlay = document.getElementById(chartId + 'Loading');
+        if (overlay) overlay.classList.add('hidden');
     }
 
     /**
@@ -777,49 +656,51 @@ class ProductAnalyticsDashboard {
      */
     showChartError(chartId) {
         const canvas = document.getElementById(chartId);
-        if (canvas) {
-            const ctx = canvas.getContext('2d');
-            ctx.font = '16px Arial';
-            ctx.fillStyle = '#dc3545';
-            ctx.textAlign = 'center';
-            ctx.fillText('Error loading chart data', canvas.width / 2, canvas.height / 2);
-        }
+        if (!canvas) return;
+        const ctx = canvas.getContext('2d');
+        ctx.font = '16px Arial';
+        ctx.fillStyle = '#dc3545';
+        ctx.textAlign = 'center';
+        ctx.fillText('Error loading chart data', canvas.width / 2, canvas.height / 2);
     }
 
     /**
-     * Show notification
+     * Show notification (toast)
      */
     showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show analytics-notification`;
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
+            document.body.appendChild(container);
+        }
+        const toastId = 'toast-' + Date.now();
+        const typeClasses = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        }[type] || 'bg-gray-500';
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${typeClasses}`;
+        toast.textContent = message;
+        container.appendChild(toast);
         setTimeout(() => {
-            notification.remove();
-        }, 5000);
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     /**
-     * Change chart type
+     * Change chart type (for switcher)
      */
     changeChartType(chartId, type) {
         const chart = this.charts[chartId];
         if (chart) {
             chart.config.type = type;
             chart.update();
-            
-            // Update button states
-            const buttons = document.querySelectorAll(`[data-chart="${chartId}"]`);
-            buttons.forEach(btn => btn.classList.remove('active'));
-            const activeBtn = document.querySelector(`[data-chart="${chartId}"][data-type="${type}"]`);
-            if (activeBtn) {
-                activeBtn.classList.add('active');
-            }
         }
     }
 
@@ -828,20 +709,16 @@ class ProductAnalyticsDashboard {
      */
     exportCostData() {
         const chart = this.charts.costBreakdown;
-        if (chart) {
-            const data = chart.data;
-            let csv = 'Category,Amount,Percentage\n';
-            
-            const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
-            
-            data.labels.forEach((label, index) => {
-                const value = data.datasets[0].data[index];
-                const percentage = ((value / total) * 100).toFixed(1);
-                csv += `"${label}",${value},${percentage}%\n`;
-            });
-            
-            this.downloadCSV(csv, 'cost_breakdown.csv');
-        }
+        if (!chart) return;
+        const data = chart.data;
+        let csv = 'Category,Amount,Percentage\n';
+        const total = data.datasets[0].data.reduce((a, b) => a + b, 0);
+        data.labels.forEach((label, i) => {
+            const val = data.datasets[0].data[i];
+            const pct = ((val / total) * 100).toFixed(1);
+            csv += `"${label}",${val},${pct}%\n`;
+        });
+        this.downloadCSV(csv, 'cost_breakdown.csv');
     }
 
     /**
@@ -862,20 +739,14 @@ class ProductAnalyticsDashboard {
      */
     async fetchWithTimeout(url, timeout = 10000) {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), timeout);
-        
+        const id = setTimeout(() => controller.abort(), timeout);
         try {
-            const response = await fetch(url, {
-                signal: controller.signal,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
-            clearTimeout(timeoutId);
-            return response;
-        } catch (error) {
-            clearTimeout(timeoutId);
-            throw error;
+            const res = await fetch(url, { signal: controller.signal, headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+            clearTimeout(id);
+            return res;
+        } catch (e) {
+            clearTimeout(id);
+            throw e;
         }
     }
 
@@ -883,19 +754,9 @@ class ProductAnalyticsDashboard {
      * Destroy dashboard
      */
     destroy() {
-        // Cleanup
-        if (this.refreshInterval) {
-            clearInterval(this.refreshInterval);
-        }
-        
-        Object.values(this.charts).forEach(chart => {
-            if (chart) chart.destroy();
-        });
-        
-        this.charts = {};
-        this.isInitialized = false;
+        if (this.refreshInterval) clearInterval(this.refreshInterval);
+        Object.values(this.charts).forEach(chart => chart?.destroy());
     }
 }
 
-// Export for global access
 window.ProductAnalyticsDashboard = ProductAnalyticsDashboard;

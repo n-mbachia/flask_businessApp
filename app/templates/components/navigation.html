@@ -1,216 +1,236 @@
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark" aria-label="Main navigation" role="navigation">
-    <div class="container">
-        <!-- Brand/logo -->
-        <a class="navbar-brand" href="{{ url_for('main.index') }}" aria-label="Home" tabindex="0">
-            <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Logo" height="40" class="d-inline-block align-text-top">
-        </a>
-        
-        <!-- Mobile menu button -->
-        <button class="navbar-toggler" type="button" 
-            data-bs-toggle="collapse" 
-            data-bs-target="#mainNavbar" 
-            aria-controls="mainNavbar" 
-            aria-expanded="false" 
-            aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-        
-        <!-- Navigation links -->
-        <div class="collapse navbar-collapse" id="mainNavbar">
-            <ul class="navbar-nav me-auto mb-2 mb-lg-0" role="menubar">
-                <li class="nav-item" role="none">
-                    <a class="nav-link{% if request.endpoint == 'storefront.catalog' %} active{% endif %}" 
-                        href="{{ url_for('storefront.catalog') }}"
-                        {% if request.endpoint == 'storefront.catalog' %}aria-current="page"{% endif %} role="menuitem">
-                        <i class="bi bi-shop me-1" aria-hidden="true"></i>Storefront
-                    </a>
-                </li>
+<!-- Navigation Bar -->
+<nav class="bg-gray-900 text-white" aria-label="Main navigation" role="navigation" x-data="{ mobileMenuOpen: false }">
+    {% set current_endpoint = request.endpoint or '' %}
+
+    {# Define all possible navigation links (only shown when authenticated) #}
+    {% set nav_links = [
+        {
+            'label': 'Dashboard',
+            'endpoint': 'main.dashboard',
+            'icon': 'fas fa-chart-pie',
+            'active_prefixes': ['main.dashboard']
+        },
+        {
+            'label': 'Analytics',
+            'endpoint': 'analytics.analytics',
+            'icon': 'fas fa-chart-line',
+            'active_prefixes': ['analytics.']
+        },
+        {
+            'label': 'Products',
+            'endpoint': 'products.manage_products',
+            'icon': 'fas fa-boxes',
+            'active_prefixes': [
+                'products.manage_products',
+                'products.edit_product',
+                'products.create_lot',
+                'products.adjust_stock',
+                'products.product_analytics_dashboard',
+                'products.product_analytics_legacy',
+                'products.search_products'
+            ]
+        },
+        {
+            'label': 'Inventory',
+            'endpoint': 'products.inventory_dashboard',
+            'icon': 'fas fa-warehouse',
+            'active_prefixes': ['products.inventory_dashboard']
+        },
+        {
+            'label': 'Sales',
+            'endpoint': 'sales.manage_sales',
+            'icon': 'fas fa-coins',
+            'active_prefixes': ['sales.']
+        },
+        {
+            'label': 'Orders',
+            'endpoint': 'orders.index',
+            'icon': 'fas fa-receipt',
+            'active_prefixes': ['orders.']
+        },
+        {
+            'label': 'Costs',
+            'endpoint': 'costs.manage_costs',
+            'icon': 'fas fa-file-invoice-dollar',
+            'active_prefixes': ['costs.']
+        },
+        {
+            'label': 'Customers',
+            'endpoint': 'customer.index',
+            'icon': 'fas fa-users',
+            'active_prefixes': ['customer.']
+        }
+    ] %}
+
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex items-center justify-between h-16">
+            <!-- Logo and desktop navigation -->
+            <div class="flex items-center space-x-6">
+                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('storefront.catalog') }}"
+                   aria-label="Profitability App home"
+                   class="flex items-center gap-3">
+                    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Profitability App logo" class="h-10 w-auto">
+                    <span class="text-lg font-semibold tracking-wide text-white">Profitability App</span>
+                </a>
 
                 {% if current_user.is_authenticated %}
-                    <!-- Dashboard -->
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint == 'main.dashboard' %} active{% endif %}" 
-                            href="{{ url_for('main.dashboard') }}"
-                            {% if request.endpoint == 'main.dashboard' %}aria-current="page"{% endif %} role="menuitem">
-                            <i class="bi bi-speedometer2 me-1" aria-hidden="true"></i>Dashboard
-                        </a>
-                    </li>
+                <div class="hidden lg:flex">
+                    <ul class="flex items-center space-x-1">
+                        {% for link in nav_links %}
+                            {# Use namespace to correctly set active state across loops #}
+                            {% set ns = namespace(is_active=(current_endpoint == link.endpoint)) %}
+                            {% for prefix in link.active_prefixes %}
+                                {% if not ns.is_active and prefix and current_endpoint.startswith(prefix) %}
+                                    {% set ns.is_active = true %}
+                                {% endif %}
+                            {% endfor %}
+                            {% set is_active = ns.is_active %}
 
-                    <!-- Analytics -->
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint == 'analytics.analytics' %} active{% endif %}" 
-                            href="{{ url_for('analytics.analytics') }}"
-                            {% if request.endpoint == 'analytics.analytics' %}aria-current="page"{% endif %} role="menuitem">
-                            <i class="bi bi-graph-up me-1" aria-hidden="true"></i>Analytics
-                        </a>
-                    </li>
-
-                    <!-- Orders -->
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint.startswith('orders.') %} active{% endif %}" 
-                            href="{{ url_for('orders.index') }}"
-                            {% if request.endpoint.startswith('orders.') %}aria-current="page"{% endif %} role="menuitem">
-                            <i class="bi bi-receipt me-1" aria-hidden="true"></i>Orders
-                        </a>
-                    </li>
-
-                    <!-- Inventory Dropdown -->
-                    <li class="nav-item dropdown" role="none">
-                        {% set is_inventory_active = request.endpoint and (
-                            request.endpoint.startswith('products.') or 
-                            'inventory' in request.endpoint or 
-                            'product' in request.endpoint
-                        ) %}
-                        <a class="nav-link dropdown-toggle{% if is_inventory_active %} active{% endif %}" 
-                            href="#" 
-                            id="inventoryDropdown" 
-                            role="button" 
-                            data-bs-toggle="dropdown" 
-                            data-bs-auto-close="outside"
-                            aria-expanded="false"
-                            aria-haspopup="true"
-                            tabindex="0">
-                            <i class="bi bi-box-seam me-1" aria-hidden="true"></i>Inventory
-                            {% if is_inventory_active %}<span class="visually-hidden">(current)</span>{% endif %}
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="inventoryDropdown" role="menu">
-                            <li role="none">
-                                <a class="dropdown-item{% if request.endpoint == 'products.manage_products' %} active{% endif %}" 
-                                    href="{{ url_for('products.manage_products') }}"
-                                    {% if request.endpoint == 'products.manage_products' %}aria-current="page"{% endif %} role="menuitem">
-                                    <i class="bi bi-box-seam me-2" aria-hidden="true"></i>Manage Products
-                                </a>
-                            </li>
-                            <li role="none">
-                                <a class="dropdown-item{% if request.endpoint == 'products.inventory_dashboard' %} active{% endif %}" 
-                                    href="{{ url_for('products.inventory_dashboard') }}"
-                                    {% if request.endpoint == 'products.inventory_dashboard' %}aria-current="page"{% endif %} role="menuitem">
-                                    <i class="bi bi-speedometer2 me-2" aria-hidden="true"></i>Inventory Dashboard
-                                </a>
-                            </li>
-
-                            {% set has_products = products is defined and products.items and products.items|length > 0 %}
-
-                            <li role="none">
-                                <a class="dropdown-item{% if request.endpoint == 'products.product_analytics_dashboard' %} active{% endif %}" 
-                                    href="{% if has_products %}{{ url_for('products.product_analytics_dashboard', product_id=products.items[0].id) }}{% else %}#{% endif %}"
-                                    {% if not has_products %}disabled{% endif %}
-                                    {% if request.endpoint == 'products.product_analytics_dashboard' %}aria-current="page"{% endif %} role="menuitem">
-                                    <i class="bi bi-graph-up me-2" aria-hidden="true"></i>Analytics Dashboard
-                                    {% if not has_products %}
-                                        <span class="small text-muted ms-2">(No products)</span>
-                                    {% endif %}
-                                </a>
-                            </li>
-
-                            {% if has_products %}
-                                <li><hr class="dropdown-divider"></li>
-                                <li><h6 class="dropdown-header" tabindex="0">Quick Access</h6></li>
-                                {% for product in products.items %}
-                                    {% set is_product_active = request.endpoint in ['products.product_inventory', 'products.adjust_stock'] and 
-                                                           (product.id ~ '') in request.path %}
-                                    <li role="none">
-                                        <a class="dropdown-item d-flex justify-content-between align-items-center{% if is_product_active %} active{% endif %}" 
-                                            href="{{ url_for('products.product_inventory', product_id=product.id) }}"
-                                            {% if is_product_active %}aria-current="page"{% endif %} role="menuitem">
-                                            <span class="text-truncate" style="max-width: 200px;" title="{{ product.name }}">
-                                                {{ product.name }}
-                                            </span>
-                                            {% if product.current_stock is defined %}
-                                                {% if product.current_stock <= 0 %}
-                                                    <span class="badge bg-danger ms-2" title="Out of stock">Out</span>
-                                                {% elif product.reorder_level is defined and product.current_stock <= product.reorder_level %}
-                                                    <span class="badge bg-warning text-dark ms-2" title="Low stock">Low</span>
-                                                {% endif %}
-                                            {% endif %}
-                                        </a>
-                                    </li>
-                                {% endfor %}
+                            {% set link_classes = 'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition ' %}
+                            {% if is_active %}
+                                {% set link_classes = link_classes + 'bg-white text-gray-900 shadow' %}
+                            {% else %}
+                                {% set link_classes = link_classes + 'text-gray-300 hover:text-white hover:bg-gray-800' %}
                             {% endif %}
-                        </ul>
-                    </li>
+                            <li>
+                                <a href="{{ url_for(link.endpoint) }}" class="{{ link_classes }}" {% if is_active %}aria-current="page"{% endif %}>
+                                    <i class="{{ link.icon }} text-base" aria-hidden="true"></i>
+                                    <span>{{ link.label }}</span>
+                                </a>
+                            </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
 
-                    <!-- Costs -->
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint == 'costs.manage_costs' %} active{% endif %}" 
-                            href="{{ url_for('costs.manage_costs') }}"
-                            {% if request.endpoint == 'costs.manage_costs' %}aria-current="page"{% endif %} role="menuitem">
-                            <i class="bi bi-currency-dollar me-1" aria-hidden="true"></i>Costs
-                        </a>
-                    </li>
-                {% endif %}
-            </ul>
-            
-            <!-- Right-aligned navigation items -->
-            <ul class="navbar-nav ms-auto" role="menubar">
-                {% if current_user.is_authenticated and current_user.is_admin %}
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint == 'storefront.pending_products' %} active{% endif %}" 
-                           href="{{ url_for('storefront.pending_products') }}" role="menuitem">
-                            <i class="bi bi-clipboard-check me-1" aria-hidden="true"></i>Review Products
-                        </a>
-                    </li>
-                {% endif %}
+            <!-- Right side: Shop button, user menu, and mobile toggle -->
+            <div class="flex items-center gap-3">
+                <!-- Shop link (visible to all) -->
+                <a href="{{ url_for('storefront.catalog') }}"
+                   class="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100">
+                    <i class="fas fa-store text-base" aria-hidden="true"></i>
+                    <span>Shop</span>
+                </a>
+
                 {% if current_user.is_authenticated %}
-                    <!-- User Dropdown -->
-                    <li class="nav-item dropdown" role="none">
-                                <a class="nav-link dropdown-toggle d-flex align-items-center" 
-                                    href="#" 
-                                    id="userDropdown" 
-                                    role="button" 
-                                    data-bs-toggle="dropdown" 
-                                    data-bs-auto-close="outside"
-                                    aria-expanded="false"
-                                    aria-haspopup="true"
-                                    tabindex="0">
-                            <i class="bi bi-person-circle me-1" aria-hidden="true"></i>
-                            <span class="d-none d-md-inline">{{ current_user.username }}</span>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown" role="menu">
-                            <li role="none">
-                                <a class="dropdown-item" href="{{ url_for('auth.profile') }}" role="menuitem">
-                                    <i class="bi bi-person me-2" aria-hidden="true"></i>Profile
-                                </a>
-                            </li>
-                            <li role="none">
-                                <a class="dropdown-item" href="{{ url_for('auth.settings') }}" role="menuitem">
-                                    <i class="bi bi-gear me-2" aria-hidden="true"></i>Settings
-                                </a>
-                            </li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li role="none">
-                                <a class="dropdown-item text-danger" href="{{ url_for('auth.logout') }}" role="menuitem">
-                                    <i class="bi bi-box-arrow-right me-2" aria-hidden="true"></i>Logout
-                                </a>
-                            </li>
-                        </ul>
-                    </li>
+                    <!-- User dropdown (desktop) -->
+                    <div class="hidden lg:block relative" x-data="{ open: false }">
+                        <button @click="open = !open"
+                                type="button"
+                                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold text-gray-200 bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                aria-expanded="false"
+                                :aria-expanded="open.toString()">
+                            <i class="fas fa-user-circle text-lg" aria-hidden="true"></i>
+                            <span>{{ current_user.username }}</span>
+                            <i class="fas fa-chevron-down text-xs" aria-hidden="true"></i>
+                        </button>
+                        <div x-show="open"
+                             @click.away="open = false"
+                             x-cloak
+                             class="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                            <a href="{{ url_for('auth.profile') }}"
+                               class="block px-4 py-2 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100">Profile</a>
+                            <a href="{{ url_for('auth.logout') }}"
+                               class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 focus:outline-none focus:bg-gray-100">Logout</a>
+                        </div>
+                    </div>
                 {% else %}
-                    <!-- Login/Signup Buttons -->
-                    <li class="nav-item" role="none">
-                        <a class="nav-link{% if request.endpoint == 'auth.login' %} active" aria-current="page"{% endif %}" 
-                           href="{{ url_for('auth.login') }}" role="menuitem">
-                            Login
-                        </a>
-                    </li>
-                    <li class="nav-item" role="none">
-                        <a class="nav-link btn btn-outline-light btn-sm ms-2" 
-                           href="{{ url_for('auth.register') }}" role="menuitem">
-                            Sign Up
-                        </a>
-                    </li>
+                    <!-- Login / Sign Up (desktop) -->
+                    <div class="hidden lg:flex items-center gap-2">
+                        <a href="{{ url_for('auth.login') }}"
+                           class="px-3 py-2 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-800 rounded-md">Login</a>
+                        <a href="{{ url_for('auth.register') }}"
+                           class="px-3 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md">Sign Up</a>
+                    </div>
                 {% endif %}
-            </ul>
+
+                <!-- Mobile menu button -->
+                <div class="flex lg:hidden">
+                    <button @click="mobileMenuOpen = !mobileMenuOpen"
+                            type="button"
+                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            aria-expanded="false"
+                            :aria-expanded="mobileMenuOpen.toString()"
+                            aria-controls="mobile-menu">
+                        <span class="sr-only">Toggle mobile menu</span>
+                        <svg x-show="!mobileMenuOpen" class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                        <svg x-show="mobileMenuOpen" class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mobile menu dropdown -->
+    <div x-show="mobileMenuOpen"
+         x-cloak
+         class="lg:hidden"
+         id="mobile-menu">
+        <div class="px-2 pt-2 pb-3 space-y-1">
+            {% if current_user.is_authenticated %}
+                {% for link in nav_links %}
+                    {# Same active‑state logic as desktop #}
+                    {% set ns = namespace(is_active=(current_endpoint == link.endpoint)) %}
+                    {% for prefix in link.active_prefixes %}
+                        {% if not ns.is_active and prefix and current_endpoint.startswith(prefix) %}
+                            {% set ns.is_active = true %}
+                        {% endif %}
+                    {% endfor %}
+                    {% set is_active = ns.is_active %}
+                    <a href="{{ url_for(link.endpoint) }}"
+                       class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-semibold transition {{ 'bg-gray-800 text-white' if is_active else 'text-gray-300 hover:text-white hover:bg-gray-700' }}"
+                       {% if is_active %}aria-current="page"{% endif %}
+                       @click="mobileMenuOpen = false">
+                        <i class="{{ link.icon }} text-base" aria-hidden="true"></i>
+                        <span>{{ link.label }}</span>
+                    </a>
+                {% endfor %}
+            {% endif %}
+
+            <div class="border-t border-gray-800 pt-3">
+                <!-- Shop link (mobile) -->
+                <a href="{{ url_for('storefront.catalog') }}"
+                   class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 rounded-md"
+                   @click="mobileMenuOpen = false">
+                    <i class="fas fa-store" aria-hidden="true"></i>
+                    <span>Shop</span>
+                </a>
+
+                {% if current_user.is_authenticated %}
+                    <!-- Profile & Logout (mobile) -->
+                    <a href="{{ url_for('auth.profile') }}"
+                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-gray-200 hover:text-white hover:bg-gray-800 rounded-md"
+                       @click="mobileMenuOpen = false">
+                        <i class="fas fa-user" aria-hidden="true"></i>
+                        <span>Profile</span>
+                    </a>
+                    <a href="{{ url_for('auth.logout') }}"
+                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-red-400 hover:text-red-200 hover:bg-gray-800 rounded-md"
+                       @click="mobileMenuOpen = false">
+                        <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
+                        <span>Logout</span>
+                    </a>
+                {% else %}
+                    <!-- Login / Sign Up (mobile) -->
+                    <a href="{{ url_for('auth.login') }}"
+                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-gray-200 hover:text-white hover:bg-gray-800 rounded-md"
+                       @click="mobileMenuOpen = false">
+                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                        <span>Login</span>
+                    </a>
+                    <a href="{{ url_for('auth.register') }}"
+                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md"
+                       @click="mobileMenuOpen = false">
+                        <i class="fas fa-user-plus" aria-hidden="true"></i>
+                        <span>Sign Up</span>
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </div>
 </nav>
-
-<!-- Loading Overlay -->
-<div class="position-fixed top-0 start-0 w-100 h-100 bg-dark bg-opacity-50 d-none" id="loadingOverlay" style="z-index: 1090;" aria-hidden="true">
-    <div class="position-absolute top-50 start-50 translate-middle text-center">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
-        </div>
-        <p class="text-white mt-2">Processing...</p>
-    </div>
-</div>

@@ -9,227 +9,179 @@
 {% endblock %}
 
 {% block content %}
-<!-- Enhanced Header -->
-<div class="inventory-header">
-    <div class="container">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-warehouse me-3"></i>
+<!-- Header -->
+<div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-8 mb-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-warehouse mr-3"></i>
                     {{ product.name }} Inventory Management
                 </h1>
-                <p class="mb-0 opacity-75">
-                    Real-time inventory tracking and management
-                </p>
+                <p class="opacity-75 mt-1">Real-time inventory tracking and management</p>
             </div>
-            <div class="col-md-4 text-md-end">
-                <div class="d-flex gap-2 justify-content-md-end">
-                    <button class="btn btn-light" onclick="window.print()">
-                        <i class="fas fa-print me-2"></i>Print Report
-                    </button>
-                    <a href="{{ url_for('products.inventory_dashboard') }}" class="btn btn-light">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Dashboard
-                    </a>
-                </div>
+            <div class="flex gap-2 mt-4 md:mt-0">
+                <button class="inline-flex items-center px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100" onclick="window.print()">
+                    <i class="fas fa-print mr-2"></i>Print Report
+                </button>
+                <a href="{{ url_for('products.inventory_dashboard') }}" class="inline-flex items-center px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Dashboard
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="container">
-    <!-- Enhanced Product Overview -->
-    <div class="product-overview-card">
-        <div class="row mb-4">
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="inventory-metric">
-                    <span class="inventory-metric-value" id="currentStock">{{ product.current_stock }}</span>
-                    <span class="inventory-metric-label">Current Stock</span>
-                    <div class="inventory-metric-change {% if stock_change > 0 %}positive{% else %}negative{% endif %}">
-                        {{ stock_change_text }}
-                    </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Product Overview -->
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="inventory-metric text-center">
+                <div class="text-2xl font-bold" id="currentStock">{{ product.current_stock }}</div>
+                <div class="text-xs text-gray-500 uppercase">Current Stock</div>
+                <div class="text-xs {% if stock_change > 0 %}text-green-600{% else %}text-red-600{% endif %}">{{ stock_change_text }}</div>
+            </div>
+            <div class="inventory-metric text-center">
+                <div class="text-2xl font-bold" id="reorderLevel">{{ product.reorder_level }}</div>
+                <div class="text-xs text-gray-500 uppercase">Reorder Level</div>
+                <div class="text-xs text-gray-600">
+                    {% set stock_percent = (product.current_stock / (product.reorder_level * 4) * 100) %}
+                    {{ [stock_percent, 100]|min|round|int }}% of capacity
                 </div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="inventory-metric">
-                    <span class="inventory-metric-value" id="reorderLevel">{{ product.reorder_level }}</span>
-                    <span class="inventory-metric-label">Reorder Level</span>
-                    <div class="inventory-metric-change">
-                        {% set stock_percent = (product.current_stock / (product.reorder_level * 4) * 100) %}
-                        {{ [stock_percent, 100]|min|round|int }}% of capacity
-                    </div>
-                </div>
+            <div class="inventory-metric text-center">
+                <div class="text-2xl font-bold">${{ "%.2f"|format(product.cogs_per_unit) }}</div>
+                <div class="text-xs text-gray-500 uppercase">COGS/Unit</div>
+                <div class="text-xs text-gray-600">Margin: {{ "%.1f"|format(product.margin_percentage) }}%</div>
             </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="inventory-metric">
-                    <span class="inventory-metric-value">${{ "%.2f"|format(product.cogs_per_unit) }}</span>
-                    <span class="inventory-metric-label">COGS/Unit</span>
-                    <div class="inventory-metric-change">
-                        Margin: {{ "%.1f"|format(product.margin_percentage) }}%
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3 col-sm-6 mb-3">
-                <div class="inventory-metric">
-                    <span class="inventory-metric-value">${{ "%.2f"|format(product.selling_price_per_unit) }}</span>
-                    <span class="inventory-metric-label">Selling Price</span>
-                    <div class="inventory-metric-change">
-                        ${{ "%.2f"|format(product.selling_price_per_unit - product.cogs_per_unit) }} profit
-                    </div>
-                </div>
+            <div class="inventory-metric text-center">
+                <div class="text-2xl font-bold">${{ "%.2f"|format(product.selling_price_per_unit) }}</div>
+                <div class="text-xs text-gray-500 uppercase">Selling Price</div>
+                <div class="text-xs text-gray-600">${{ "%.2f"|format(product.selling_price_per_unit - product.cogs_per_unit) }} profit</div>
             </div>
         </div>
 
         <!-- Stock Level Progress -->
-        <div class="row">
-            <div class="col-12">
-                <h5 class="mb-3">Stock Level Status</h5>
-                {% set stock_percentage = (product.current_stock / (product.reorder_level * 4) * 100) %}
-                {% set stock_status = 'critical' if product.current_stock <= product.reorder_level else ('warning' if product.current_stock <= product.reorder_level * 2 else 'success') %}
-
-                <div class="stock-progress">
-                    <div class="stock-progress-bar {{ stock_status }}" 
-                         style="width: {{ [stock_percentage, 100]|min }}%">
-                        {{ product.current_stock }} units
-                    </div>
-                    <div class="stock-status-indicator">
-                        {% if stock_status == 'critical' %}
-                            <i class="fas fa-exclamation-triangle text-white"></i>
-                        {% elif stock_status == 'warning' %}
-                            <i class="fas fa-exclamation-circle text-white"></i>
-                        {% else %}
-                            <i class="fas fa-check-circle text-white"></i>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="row mt-3">
-                    <div class="col-md-3">
-                        <small class="text-muted">Reorder Level: <strong>{{ product.reorder_level }} units</strong></small>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">Optimal Level: <strong>{{ product.reorder_level * 4 }} units</strong></small>
-                    </div>
-                    <div class="col-md-3">
-                        <small class="text-muted">Current Status: <strong class="text-{{ stock_status }}">{{ stock_status|title }}</strong></small>
-                    </div>
-                    <div class="col-md-3 text-end">
-                        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#editLevelsModal">
-                            <i class="fas fa-edit me-1"></i>Edit Levels
-                        </button>
-                    </div>
+        <div class="mt-6">
+            <h5 class="text-sm font-medium mb-2">Stock Level Status</h5>
+            {% set stock_percentage = (product.current_stock / (product.reorder_level * 4) * 100) %}
+            {% set stock_status = 'critical' if product.current_stock <= product.reorder_level else ('warning' if product.current_stock <= product.reorder_level * 2 else 'success') %}
+            <div class="relative h-4 bg-gray-200 rounded-full overflow-hidden">
+                <div class="absolute inset-0 h-full rounded-full {{ 'bg-red-500' if stock_status == 'critical' else 'bg-yellow-500' if stock_status == 'warning' else 'bg-green-500' }}" style="width: {{ [stock_percentage, 100]|min }}%"></div>
+                <span class="absolute inset-0 flex items-center justify-center text-xs text-white font-medium mix-blend-difference">{{ product.current_stock }} units</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3 text-xs">
+                <div><span class="text-gray-500">Reorder Level:</span> <strong>{{ product.reorder_level }} units</strong></div>
+                <div><span class="text-gray-500">Optimal Level:</span> <strong>{{ product.reorder_level * 4 }} units</strong></div>
+                <div><span class="text-gray-500">Status:</span> <strong class="text-{{ 'green' if stock_status == 'success' else 'yellow' if stock_status == 'warning' else 'red' }}-600">{{ stock_status|title }}</strong></div>
+                <div class="text-right">
+                    <button id="editLevelsTrigger" class="inline-flex items-center px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <i data-lucide="edit" class="w-4 h-4 mr-1"></i>Edit Levels
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <!-- Stock Over Time Chart -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h5 class="mb-0">
-                <i class="fas fa-chart-line text-primary me-2"></i>
-                Stock Level History (Last 30 Days)
-            </h5>
-        </div>
-        <div class="card-body">
-            <canvas id="stockChart" height="250"></canvas>
-        </div>
+    <div class="bg-white shadow rounded-lg p-6 mb-6">
+        <h5 class="text-sm font-medium mb-3 flex items-center">
+            <i class="fas fa-chart-line text-blue-600 mr-2"></i>
+            Stock Level History (Last 30 Days)
+        </h5>
+        <canvas id="stockChart" height="250"></canvas>
     </div>
 
     <!-- Inventory Movements Table -->
-    <div class="card">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="fas fa-exchange-alt text-primary me-2"></i>
+    <div class="bg-white shadow rounded-lg">
+        <div class="px-4 py-3 border-b border-gray-200 flex flex-wrap justify-between items-center">
+            <h5 class="text-sm font-medium flex items-center">
+                <i class="fas fa-exchange-alt text-blue-600 mr-2"></i>
                 Inventory Movements
             </h5>
-            <div class="d-flex gap-2">
-                <input type="text" id="movementSearch" class="form-control form-control-sm" placeholder="Search movements..." style="width: 200px;">
-                <select id="movementFilter" class="form-select form-select-sm" style="width: auto;">
+            <div class="flex gap-2 mt-2 sm:mt-0">
+                <input type="text" id="movementSearch" class="block w-48 rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" placeholder="Search movements...">
+                <select id="movementFilter" class="block rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
                     <option value="">All Types</option>
                     <option value="stock_in">Stock In</option>
                     <option value="stock_out">Stock Out</option>
                     <option value="adjustment">Adjustment</option>
                 </select>
-                <button class="btn btn-primary btn-sm" onclick="inventoryManager.addMovement()">
-                    <i class="fas fa-plus me-1"></i>New Movement
+                <button class="inline-flex items-center px-3 py-1.5 border border-transparent text-xs font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700" onclick="inventoryManager.addMovement()">
+                    <i class="fas fa-plus mr-1"></i>New Movement
                 </button>
             </div>
         </div>
-        <div class="card-body">
+        <div class="p-4">
             {% if movements.items %}
-                <div class="table-responsive">
-                    <table class="table movement-table" id="movementsTable">
-                        <thead>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200 text-sm" id="movementsTable">
+                        <thead class="bg-gray-50">
                             <tr>
-                                <th>Date & Time</th>
-                                <th>Type</th>
-                                <th>Quantity</th>
-                                <th>Unit Cost</th>
-                                <th>Total Value</th>
-                                <th>Notes</th>
-                                <th>User</th>
-                                <th class="text-end">Actions</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Date & Time</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Type</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Quantity</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Unit Cost</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Total Value</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">Notes</th>
+                                <th class="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">User</th>
+                                <th class="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody class="bg-white divide-y divide-gray-200">
                             {% for movement in movements.items %}
                             <tr data-movement-id="{{ movement.id }}" class="movement-row">
-                                <td>
-                                    <div class="d-flex flex-column">
-                                        <strong>{{ movement.created_at.strftime('%Y-%m-%d') }}</strong>
-                                        <small class="text-muted">{{ movement.created_at.strftime('%H:%M:%S') }}</small>
-                                    </div>
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <div><strong>{{ movement.created_at.strftime('%Y-%m-%d') }}</strong></div>
+                                    <div class="text-xs text-gray-500">{{ movement.created_at.strftime('%H:%M:%S') }}</div>
                                 </td>
-                                <td>
-                                    <span class="movement-type-badge {% if movement.quantity_change > 0 %}bg-success{% else %}bg-danger{% endif %}">
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if movement.quantity_change > 0 %}bg-green-100 text-green-800{% else %}bg-red-100 text-red-800{% endif %}">
                                         {% if movement.quantity_change > 0 %}
-                                            <i class="fas fa-arrow-down me-1"></i>Stock In
+                                            <i class="fas fa-arrow-down mr-1"></i>Stock In
                                         {% else %}
-                                            <i class="fas fa-arrow-up me-1"></i>Stock Out
+                                            <i class="fas fa-arrow-up mr-1"></i>Stock Out
                                         {% endif %}
                                     </span>
                                 </td>
-                                <td class="editable-cell" data-field="quantity">
+                                <td class="px-4 py-2 whitespace-nowrap editable-cell" data-field="quantity">
                                     <span class="editable-value">{{ movement.quantity_change|abs }}</span>
                                     {% if current_user.can_edit_inventory %}
-                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'quantity')">
+                                        <button class="ml-1 text-blue-600 hover:text-blue-800" onclick="inventoryManager.editField({{ movement.id }}, 'quantity')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     {% endif %}
                                 </td>
-                                <td class="editable-cell" data-field="unit_cost">
+                                <td class="px-4 py-2 whitespace-nowrap editable-cell" data-field="unit_cost">
                                     <span class="editable-value">${{ "%.2f"|format(movement.unit_cost) }}</span>
                                     {% if current_user.can_edit_inventory %}
-                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'unit_cost')">
+                                        <button class="ml-1 text-blue-600 hover:text-blue-800" onclick="inventoryManager.editField({{ movement.id }}, 'unit_cost')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     {% endif %}
                                 </td>
-                                <td>${{ "%.2f"|format(movement.quantity_change * movement.unit_cost) }}</td>
-                                <td class="editable-cell" data-field="notes" style="max-width: 200px;">
+                                <td class="px-4 py-2 whitespace-nowrap">${{ "%.2f"|format(movement.quantity_change * movement.unit_cost) }}</td>
+                                <td class="px-4 py-2 whitespace-nowrap max-w-xs truncate editable-cell" data-field="notes">
                                     <span class="editable-value">{{ movement.notes or '-' }}</span>
                                     {% if current_user.can_edit_inventory %}
-                                        <button class="btn btn-sm btn-outline-secondary edit-btn" onclick="inventoryManager.editField({{ movement.id }}, 'notes')">
+                                        <button class="ml-1 text-blue-600 hover:text-blue-800" onclick="inventoryManager.editField({{ movement.id }}, 'notes')">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                     {% endif %}
                                 </td>
-                                <td>
-                                    <div class="d-flex align-items-center">
-                                        <img src="{{ movement.user.avatar or url_for('static', filename='img/default-avatar.png') }}" 
-                                             alt="{{ movement.user.name }}" 
-                                             class="rounded-circle me-2" 
-                                             style="width: 24px; height: 24px; object-fit: cover;">
+                                <td class="px-4 py-2 whitespace-nowrap">
+                                    <div class="flex items-center">
+                                        <img src="{{ movement.user.avatar or url_for('static', filename='img/default-avatar.png') }}" alt="{{ movement.user.name }}" class="w-6 h-6 rounded-full mr-2 object-cover">
                                         <strong>{{ movement.user.name }}</strong>
                                     </div>
                                 </td>
-                                <td class="text-end">
-                                    <div class="btn-group btn-group-sm">
-                                        <button class="btn btn-outline-primary" onclick="inventoryManager.viewDetails({{ movement.id }})" title="View Details">
+                                <td class="px-4 py-2 whitespace-nowrap text-right">
+                                    <div class="flex justify-end gap-1">
+                                        <button class="p-1 text-blue-600 hover:text-blue-800" onclick="inventoryManager.viewDetails({{ movement.id }})" title="View Details">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                         {% if current_user.can_delete_inventory %}
-                                            <button class="btn btn-outline-danger" onclick="inventoryManager.deleteMovement({{ movement.id }})" title="Delete Movement">
+                                            <button class="p-1 text-red-600 hover:text-red-800" onclick="inventoryManager.deleteMovement({{ movement.id }})" title="Delete Movement">
                                                 <i class="fas fa-trash"></i>
                                             </button>
                                         {% endif %}
@@ -242,45 +194,41 @@
                 </div>
 
                 <!-- Pagination -->
-                <nav aria-label="Movements pagination" class="mt-3">
-                    <ul class="pagination pagination-sm justify-content-center">
+                <nav class="flex justify-center mt-4">
+                    <ul class="flex gap-1">
                         {% if movements.has_prev %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.prev_num) }}">Previous</a>
-                        </li>
+                        <li><a class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.prev_num) }}">Previous</a></li>
                         {% else %}
-                        <li class="page-item disabled"><span class="page-link">Previous</span></li>
+                        <li><span class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-400 bg-gray-50">Previous</span></li>
                         {% endif %}
 
                         {% for page_num in movements.iter_pages(left_edge=1, right_edge=1, left_current=1, right_current=2) %}
                             {% if page_num %}
                                 {% if page_num == movements.page %}
-                                <li class="page-item active"><span class="page-link">{{ page_num }}</span></li>
+                                <li><span class="px-3 py-1 border border-blue-500 rounded-md text-sm text-white bg-blue-600">{{ page_num }}</span></li>
                                 {% else %}
-                                <li class="page-item"><a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=page_num) }}">{{ page_num }}</a></li>
+                                <li><a class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" href="{{ url_for('products.product_inventory', product_id=product.id, page=page_num) }}">{{ page_num }}</a></li>
                                 {% endif %}
                             {% else %}
-                                <li class="page-item disabled"><span class="page-link">…</span></li>
+                                <li><span class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-400">…</span></li>
                             {% endif %}
                         {% endfor %}
 
                         {% if movements.has_next %}
-                        <li class="page-item">
-                            <a class="page-link" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.next_num) }}">Next</a>
-                        </li>
+                        <li><a class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-700 hover:bg-gray-50" href="{{ url_for('products.product_inventory', product_id=product.id, page=movements.next_num) }}">Next</a></li>
                         {% else %}
-                        <li class="page-item disabled"><span class="page-link">Next</span></li>
+                        <li><span class="px-3 py-1 border border-gray-300 rounded-md text-sm text-gray-400 bg-gray-50">Next</span></li>
                         {% endif %}
                     </ul>
                 </nav>
             {% else %}
-                <div class="text-center py-5">
-                    <div class="text-muted">
+                <div class="text-center py-8">
+                    <div class="text-gray-400">
                         <i class="fas fa-exchange-alt fa-3x mb-3"></i>
-                        <h4>No Inventory Movements Found</h4>
-                        <p>Start tracking inventory movements for better stock management.</p>
-                        <button class="btn btn-primary" onclick="inventoryManager.addMovement()">
-                            <i class="fas fa-plus me-2"></i>Record First Movement
+                        <h4 class="text-lg font-medium">No Inventory Movements Found</h4>
+                        <p class="text-sm">Start tracking inventory movements for better stock management.</p>
+                        <button class="mt-3 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700" onclick="inventoryManager.addMovement()">
+                            <i class="fas fa-plus mr-2"></i>Record First Movement
                         </button>
                     </div>
                 </div>
@@ -289,32 +237,32 @@
     </div>
 </div>
 
-<!-- Edit Levels Modal -->
-<div class="modal fade" id="editLevelsModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Edit Stock Levels</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Edit Levels Modal (Alpine) -->
+<div id="editLevelsModal" x-data="{ open: false }" x-show="open" x-cloak @keydown.escape.window="open = false" class="fixed inset-0 z-50 overflow-y-auto">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <div x-show="open" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" @click="open = false"></div>
+        <div x-show="open" x-transition:enter="ease-out duration-300" x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100" x-transition:leave="ease-in duration-200" x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100" x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+                <h3 class="text-lg font-medium text-gray-900">Edit Stock Levels</h3>
+                <div class="mt-2">
+                    <form id="editLevelsForm">
+                        <div class="mb-3">
+                            <label for="reorder_level" class="block text-sm font-medium text-gray-700">Reorder Level</label>
+                            <input type="number" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" id="reorder_level" value="{{ product.reorder_level }}">
+                        </div>
+                    </form>
+                </div>
             </div>
-            <div class="modal-body">
-                <form id="editLevelsForm">
-                    <div class="mb-3">
-                        <label for="reorder_level" class="form-label">Reorder Level</label>
-                        <input type="number" class="form-control" id="reorder_level" value="{{ product.reorder_level }}">
-                    </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="inventoryManager.saveLevels()">Save</button>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm" onclick="inventoryManager.saveLevels()">Save</button>
+                <button type="button" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:w-auto sm:text-sm" @click="open = false">Cancel</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Toast container for notifications -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+<!-- Toast container -->
+<div class="fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2" id="toastContainer"></div>
 {% endblock %}
 
 {% block scripts %}
@@ -327,6 +275,15 @@ document.addEventListener('DOMContentLoaded', function() {
         stockChartData: {{ stock_chart_data|tojson|safe }}
     });
     window.inventoryManager.init();
+
+    // Open modal with Alpine
+    const editTrigger = document.getElementById('editLevelsTrigger');
+    const editModal = document.getElementById('editLevelsModal');
+    if (editTrigger && editModal) {
+        editTrigger.addEventListener('click', () => {
+            editModal.__x?.$data && (editModal.__x.$data.open = true);
+        });
+    }
 });
 </script>
 {% endblock %}

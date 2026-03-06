@@ -3,83 +3,77 @@
 {% block title %}Vendor Portal{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <header class="mb-4">
-        <div class="d-flex align-items-center justify-content-between">
-            <div>
-                <h1 class="h3 mb-0">Vendor Portal</h1>
-                <p class="text-muted">Upload new products for the approved storefront.</p>
-            </div>
-            <div>
-                <span class="badge bg-success">{{ 'Vendor' if current_user.is_vendor else 'User' }}</span>
-            </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Vendor Portal</h1>
+            <p class="text-gray-500">Upload new products for the approved storefront.</p>
         </div>
-    </header>
+        <div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                {{ 'Vendor' if current_user.is_vendor else 'User' }}
+            </span>
+        </div>
+    </div>
 
-    <div class="row g-4">
-        <div class="col-lg-5">
-            <div class="card shadow-sm border-0">
-                <div class="card-header">
-                    <h2 class="h6 mb-0">Submit a Product</h2>
-                </div>
-                <div class="card-body">
-                    <form method="POST" enctype="multipart/form-data">
-                        {{ form.hidden_tag() }}
-                        {% for field in [form.name, form.description, form.category, form.cogs_per_unit, form.selling_price_per_unit, form.reorder_level, form.initial_quantity, form.sku, form.barcode] %}
-                        <div class="mb-3">
-                            {{ field.label(class="form-label fw-semibold") }}
-                            {{ field(class="form-control" + (' is-invalid' if field.errors else '')) }}
-                            {% if field.errors %}
-                                <div class="invalid-feedback">
-                                    {{ field.errors[0] }}
-                                </div>
-                            {% endif %}
-                        </div>
-                        {% endfor %}
-                        <div class="mb-3">
-                            <label class="form-label fw-semibold" for="vendor_image">Product Image</label>
-                            <input type="file" class="form-control" id="vendor_image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
-                            <small class="form-text text-muted">Optional image that appears in the storefront catalog.</small>
-                        </div>
-                        <div class="d-grid">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Submission Form -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <h2 class="text-md font-medium">Submit a Product</h2>
+            </div>
+            <div class="p-6">
+                <form method="POST" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+                    {% for field in [form.name, form.description, form.category, form.cogs_per_unit, form.selling_price_per_unit, form.reorder_level, form.initial_quantity, form.sku, form.barcode] %}
+                    <div class="mb-4">
+                        <label for="{{ field.id }}" class="block text-sm font-medium text-gray-700 mb-1">{{ field.label.text }}</label>
+                        {{ field(class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                        {% if field.errors %}
+                            <p class="mt-1 text-sm text-red-600">{{ field.errors[0] }}</p>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                    <div class="mb-4">
+                        <label for="vendor_image" class="block text-sm font-medium text-gray-700 mb-1">Product Image</label>
+                        <input type="file" id="vendor_image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
+                               class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <p class="mt-1 text-xs text-gray-500">Optional image that appears in the storefront catalog.</p>
+                    </div>
+                    <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                        {{ form.submit.label.text }}
+                    </button>
+                </form>
             </div>
         </div>
-        <div class="col-lg-7">
-            <div class="card shadow-sm border-0 h-100">
-                <div class="card-header">
-                    <h2 class="h6 mb-0">Your Products</h2>
-                </div>
-                <div class="card-body">
-                    {% if products %}
-                        <div class="list-group">
-                        {% for product in products %}
-                        <div class="list-group-item">
-                            <div class="d-flex align-items-start gap-3">
-                                <img src="{{ product.image_url }}" alt="{{ product.name }}" class="rounded" style="width: 64px; height: 64px; object-fit: cover;">
-                                <div class="flex-grow-1">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <h3 class="h6 mb-0">{{ product.name }}</h3>
-                                        <span class="badge {% if product.is_approved %}bg-success{% else %}bg-warning text-dark{% endif %}">
-                                            {% if product.is_approved %}Approved{% else %}Pending{% endif %}
-                                        </span>
-                                    </div>
-                                    <p class="text-muted mb-1">{{ product.category }} • ${{ "%0.2f"|format(product.selling_price_per_unit) }}</p>
-                                    <small class="text-muted">
-                                        {{ product.description|default('No details provided.') }}
-                                    </small>
+
+        <!-- Product List -->
+        <div class="bg-white shadow rounded-lg overflow-hidden">
+            <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
+                <h2 class="text-md font-medium">Your Products</h2>
+            </div>
+            <div class="p-6">
+                {% if products %}
+                    <ul class="divide-y divide-gray-200">
+                    {% for product in products %}
+                        <li class="py-4 flex items-start gap-4">
+                            <img src="{{ product.image_url }}" alt="{{ product.name }}" class="w-16 h-16 rounded object-cover">
+                            <div class="flex-1">
+                                <div class="flex justify-between items-start">
+                                    <h3 class="text-sm font-medium text-gray-900">{{ product.name }}</h3>
+                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {% if product.is_approved %}bg-green-100 text-green-800{% else %}bg-yellow-100 text-yellow-800{% endif %}">
+                                        {% if product.is_approved %}Approved{% else %}Pending{% endif %}
+                                    </span>
                                 </div>
+                                <p class="text-xs text-gray-500 mt-1">{{ product.category }} • ${{ "%0.2f"|format(product.selling_price_per_unit) }}</p>
+                                <p class="text-xs text-gray-600 mt-1">{{ product.description|default('No details provided.')|truncate(60) }}</p>
                             </div>
-                        </div>
-                        {% endfor %}
-                        </div>
-                    {% else %}
-                        <p class="text-muted">You have not submitted any storefront products yet.</p>
-                    {% endif %}
-                </div>
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-gray-500">You have not submitted any storefront products yet.</p>
+                {% endif %}
             </div>
         </div>
     </div>

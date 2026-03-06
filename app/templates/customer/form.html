@@ -1,200 +1,135 @@
-<!-- app/templates/customer/form.html -->
 {% extends "_base.html" %}
 
 {% block title %}{{ title }}{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4 py-4">
-    <div class="row">
-        <div class="col-lg-8">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h5 class="mb-0">{{ title }}</h5>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="lg:grid lg:grid-cols-3 lg:gap-8">
+        <!-- Main Form -->
+        <div class="lg:col-span-2">
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 bg-gray-50">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">{{ title }}</h3>
                 </div>
-                <div class="card-body">
-                    <form method="POST" id="customerForm" class="needs-validation" novalidate>
+                <div class="px-4 py-5 sm:p-6">
+                    <form method="POST" id="customerForm" class="space-y-6" novalidate>
                         {{ form.hidden_tag() }}
-                        
+
                         <!-- Customer Information -->
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                {{ form.name.label(class="form-label fw-semibold") }}
-                                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else ""), 
-                                             placeholder="John Doe", required=true, 
-                                             pattern=".{2,}", title="Name must be at least 2 characters") }}
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-2">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700">{{ form.name.label.text }}</label>
+                                {{ form.name(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.name.errors else ""), placeholder="John Doe", required=true, pattern=".{2,}") }}
                                 {% if form.name.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.name.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.name.errors[0] }}</p>
                                 {% else %}
-                                    <div class="invalid-feedback">Please enter a valid name (at least 2 characters).</div>
+                                    <p class="mt-2 text-sm text-gray-500 hidden validation-message" data-field="name">Please enter at least 2 characters.</p>
                                 {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                {{ form.email.label(class="form-label fw-semibold") }}
-                                <div class="input-group has-validation">
-                                    <span class="input-group-text">@</span>
-                                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else ""), 
-                                                 placeholder="customer@example.com", type="email",
-                                                 pattern="[^\s@]+@[^\s@]+\.[^\s@]+", title="Enter a valid email address") }}
+                            <div>
+                                <label for="email" class="block text-sm font-medium text-gray-700">{{ form.email.label.text }}</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">@</span>
+                                    {{ form.email(class="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-r-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.email.errors else ""), placeholder="customer@example.com", type="email", pattern="[^\s@]+@[^\s@]+\.[^\s@]+") }}
                                 </div>
                                 {% if form.email.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.email.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.email.errors[0] }}</p>
                                 {% else %}
-                                    <div class="invalid-feedback">Please enter a valid email address.</div>
+                                    <p class="mt-2 text-sm text-gray-500 hidden validation-message" data-field="email">Please enter a valid email address.</p>
                                 {% endif %}
                             </div>
-                        </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-6">
-                                {{ form.phone.label(class="form-label fw-semibold") }}
-                                {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else ""), 
-                                             placeholder="+1 (555) 123-4567",
-                                             pattern="^[\d\s\-\+\(\)]{10,}$", title="Enter a valid phone number") }}
+                            <div>
+                                <label for="phone" class="block text-sm font-medium text-gray-700">{{ form.phone.label.text }}</label>
+                                {{ form.phone(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.phone.errors else ""), placeholder="+1 (555) 123-4567", pattern="^[\d\s\-\+\(\)]{10,}$") }}
                                 {% if form.phone.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.phone.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.phone.errors[0] }}</p>
                                 {% else %}
-                                    <div class="invalid-feedback">Please enter a valid phone number.</div>
+                                    <p class="mt-2 text-sm text-gray-500 hidden validation-message" data-field="phone">Enter a valid phone number.</p>
                                 {% endif %}
                             </div>
-                            <div class="col-md-6">
-                                {{ form.company.label(class="form-label fw-semibold") }}
-                                {{ form.company(class="form-control" + (" is-invalid" if form.company.errors else ""), 
-                                             placeholder="Acme Inc.") }}
+                            <div>
+                                <label for="company" class="block text-sm font-medium text-gray-700">{{ form.company.label.text }}</label>
+                                {{ form.company(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.company.errors else ""), placeholder="Acme Inc.") }}
                                 {% if form.company.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.company.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.company.errors[0] }}</p>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <!-- Address Information -->
-                        <div class="mb-3">
-                            {{ form.address.label(class="form-label fw-semibold") }}
-                            {{ form.address(class="form-control" + (" is-invalid" if form.address.errors else ""), 
-                                         placeholder="123 Main St") }}
+                        <!-- Address -->
+                        <div>
+                            <label for="address" class="block text-sm font-medium text-gray-700">{{ form.address.label.text }}</label>
+                            {{ form.address(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.address.errors else ""), placeholder="123 Main St") }}
                             {% if form.address.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.address.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                <p class="mt-2 text-sm text-red-600">{{ form.address.errors[0] }}</p>
                             {% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.address2.label(class="form-label fw-semibold") }}
-                            {{ form.address2(class="form-control" + (" is-invalid" if form.address2.errors else ""), 
-                                         placeholder="Apt 4B") }}
+                        <div>
+                            <label for="address2" class="block text-sm font-medium text-gray-700">{{ form.address2.label.text }}</label>
+                            {{ form.address2(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.address2.errors else ""), placeholder="Apt 4B") }}
                             {% if form.address2.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.address2.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                <p class="mt-2 text-sm text-red-600">{{ form.address2.errors[0] }}</p>
                             {% endif %}
                         </div>
 
-                        <div class="row g-3 mb-3">
-                            <div class="col-md-4">
-                                {{ form.city.label(class="form-label fw-semibold") }}
-                                {{ form.city(class="form-control" + (" is-invalid" if form.city.errors else ""), 
-                                         placeholder="New York") }}
+                        <div class="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-4">
+                            <div class="sm:col-span-2">
+                                <label for="city" class="block text-sm font-medium text-gray-700">{{ form.city.label.text }}</label>
+                                {{ form.city(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.city.errors else ""), placeholder="New York") }}
                                 {% if form.city.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.city.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.city.errors[0] }}</p>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                {{ form.state.label(class="form-label fw-semibold") }}
-                                {{ form.state(class="form-control" + (" is-invalid" if form.state.errors else ""), 
-                                         placeholder="NY") }}
+                            <div>
+                                <label for="state" class="block text-sm font-medium text-gray-700">{{ form.state.label.text }}</label>
+                                {{ form.state(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.state.errors else ""), placeholder="NY") }}
                                 {% if form.state.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.state.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.state.errors[0] }}</p>
                                 {% endif %}
                             </div>
-                            <div class="col-md-4">
-                                {{ form.postal_code.label(class="form-label fw-semibold") }}
-                                {{ form.postal_code(class="form-control" + (" is-invalid" if form.postal_code.errors else ""), 
-                                                 placeholder="10001") }}
+                            <div>
+                                <label for="postal_code" class="block text-sm font-medium text-gray-700">{{ form.postal_code.label.text }}</label>
+                                {{ form.postal_code(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.postal_code.errors else ""), placeholder="10001") }}
                                 {% if form.postal_code.errors %}
-                                    <div class="invalid-feedback">
-                                        {% for error in form.postal_code.errors %}
-                                            <div>{{ error }}</div>
-                                        {% endfor %}
-                                    </div>
+                                    <p class="mt-2 text-sm text-red-600">{{ form.postal_code.errors[0] }}</p>
                                 {% endif %}
                             </div>
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.country.label(class="form-label fw-semibold") }}
-                            {{ form.country(class="form-control" + (" is-invalid" if form.country.errors else ""), 
-                                         placeholder="United States") }}
+                        <div>
+                            <label for="country" class="block text-sm font-medium text-gray-700">{{ form.country.label.text }}</label>
+                            {{ form.country(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.country.errors else ""), placeholder="United States") }}
                             {% if form.country.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.country.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                <p class="mt-2 text-sm text-red-600">{{ form.country.errors[0] }}</p>
                             {% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.tax_id.label(class="form-label fw-semibold") }}
-                            {{ form.tax_id(class="form-control" + (" is-invalid" if form.tax_id.errors else ""), 
-                                         placeholder="123-45-6789") }}
+                        <div>
+                            <label for="tax_id" class="block text-sm font-medium text-gray-700">{{ form.tax_id.label.text }}</label>
+                            {{ form.tax_id(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.tax_id.errors else ""), placeholder="123-45-6789") }}
                             {% if form.tax_id.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.tax_id.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                <p class="mt-2 text-sm text-red-600">{{ form.tax_id.errors[0] }}</p>
                             {% endif %}
                         </div>
 
-                        <div class="mb-3">
-                            {{ form.notes.label(class="form-label fw-semibold") }}
-                            {{ form.notes(class="form-control" + (" is-invalid" if form.notes.errors else ""), 
-                                         rows="3", placeholder="Additional notes...") }}
+                        <div>
+                            <label for="notes" class="block text-sm font-medium text-gray-700">{{ form.notes.label.text }}</label>
+                            {{ form.notes(class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" + (" border-red-300" if form.notes.errors else ""), rows="3", placeholder="Additional notes...") }}
                             {% if form.notes.errors %}
-                                <div class="invalid-feedback">
-                                    {% for error in form.notes.errors %}
-                                        <div>{{ error }}</div>
-                                    {% endfor %}
-                                </div>
+                                <p class="mt-2 text-sm text-red-600">{{ form.notes.errors[0] }}</p>
                             {% endif %}
                         </div>
 
                         <!-- Form Actions -->
-                        <div class="d-flex justify-content-between align-items-center">
-                            <a href="{{ url_for('customer.index') }}" class="btn btn-outline-secondary">
-                                <i class="fas fa-times me-1"></i> Cancel
+                        <div class="flex justify-between">
+                            <a href="{{ url_for('customer.index') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <i class="fas fa-times mr-2"></i> Cancel
                             </a>
-                            <button type="submit" class="btn btn-primary" id="submitBtn">
-                                <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
-                                <span class="btn-text"><i class="fas fa-save me-1"></i> {{ form.submit.label.text }}</span>
+                            <button type="submit" id="submitBtn" class="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <span class="spinner-border hidden mr-2 inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent" role="status" aria-hidden="true"></span>
+                                <span class="btn-text"><i class="fas fa-save mr-2"></i> {{ form.submit.label.text }}</span>
                             </button>
                         </div>
                         {% if request.args.get('next') %}
@@ -204,39 +139,39 @@
                 </div>
             </div>
         </div>
-        
+
         <!-- Quick Stats Sidebar -->
-        <div class="col-lg-4">
-            <div class="card shadow-sm">
-                <div class="card-header bg-white">
-                    <h6 class="mb-0">Quick Stats</h6>
+        <div class="mt-8 lg:mt-0">
+            <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+                <div class="px-4 py-5 sm:px-6 bg-gray-50">
+                    <h3 class="text-lg font-medium leading-6 text-gray-900">Quick Stats</h3>
                 </div>
-                <div class="card-body">
+                <div class="px-4 py-5 sm:p-6">
                     {% if customer %}
-                    <div class="mb-3">
-                        <small class="text-muted">Customer Since</small>
-                        <div class="fw-bold">{{ customer.created_at.strftime('%B %d, %Y') if customer.created_at else 'N/A' }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Total Orders</small>
-                        <div class="fw-bold">{{ customer.get_order_count() }}</div>
-                    </div>
-                    <div class="mb-3">
-                        <small class="text-muted">Total Spent</small>
-                        <div class="fw-bold">${{ "%.2f"|format(customer.get_total_spent()) }}</div>
-                    </div>
-                    <div>
-                        <small class="text-muted">Status</small>
+                    <dl class="space-y-4">
                         <div>
-                            {% if customer.is_active %}
-                                <span class="badge bg-success">Active</span>
-                            {% else %}
-                                <span class="badge bg-secondary">Inactive</span>
-                            {% endif %}
+                            <dt class="text-sm font-medium text-gray-500">Customer Since</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ customer.created_at.strftime('%B %d, %Y') if customer.created_at else 'N/A' }}</dd>
                         </div>
-                    </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Total Orders</dt>
+                            <dd class="mt-1 text-sm text-gray-900">{{ customer.get_order_count() }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Total Spent</dt>
+                            <dd class="mt-1 text-sm text-gray-900">${{ "%.2f"|format(customer.get_total_spent()) }}</dd>
+                        </div>
+                        <div>
+                            <dt class="text-sm font-medium text-gray-500">Status</dt>
+                            <dd class="mt-1">
+                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium {{ 'bg-green-100 text-green-800' if customer.is_active else 'bg-gray-100 text-gray-800' }}">
+                                    {{ 'Active' if customer.is_active else 'Inactive' }}
+                                </span>
+                            </dd>
+                        </div>
+                    </dl>
                     {% else %}
-                    <div class="text-center text-muted py-3">
+                    <div class="text-center text-gray-500 py-6">
                         <i class="fas fa-user-plus fa-3x mb-3"></i>
                         <p>New Customer</p>
                     </div>
@@ -247,8 +182,8 @@
     </div>
 </div>
 
-<!-- Toast Container for notifications -->
-<div class="toast-container position-fixed bottom-0 end-0 p-3" id="toastContainer"></div>
+<!-- Toast Container -->
+<div id="toastContainer" class="fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2"></div>
 {% endblock %}
 
 {% block scripts %}

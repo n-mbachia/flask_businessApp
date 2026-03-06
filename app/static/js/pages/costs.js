@@ -5,76 +5,24 @@
 (function() {
     'use strict';
 
-    // Cache DOM elements and state
     let csrfToken = null;
-    let toastContainer = null;
 
     document.addEventListener('DOMContentLoaded', function() {
         // Get CSRF token from meta tag
         const meta = document.querySelector('meta[name="csrf-token"]');
         csrfToken = meta ? meta.getAttribute('content') : '';
 
-        // Create toast container if not present
-        if (!document.getElementById('toastContainer')) {
-            toastContainer = document.createElement('div');
-            toastContainer.id = 'toastContainer';
-            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-            document.body.appendChild(toastContainer);
-        } else {
-            toastContainer = document.getElementById('toastContainer');
-        }
-
-        // Initialize field toggles (is_direct, is_recurring)
-        initFieldToggles();
-
         // Initialize delete handlers
         initDeleteHandlers();
 
-        // Initialize Select2 if available
+        // Optional: Initialize Select2 if available and needed
         if (window.$ && $.fn.select2) {
             $('.select2').select2({
-                theme: 'bootstrap-5',
+                theme: 'bootstrap-5', // may need to change if you keep bootstrap theme
                 width: '100%'
             });
         }
-
-        // Optional: initialize tooltips
-        if (window.bootstrap && bootstrap.Tooltip) {
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => new bootstrap.Tooltip(el));
-        }
     });
-
-    /**
-     * Show/hide product and recurrence fields based on checkboxes.
-     */
-    function initFieldToggles() {
-        const isDirect = document.getElementById('is_direct');
-        const productField = document.getElementById('productField');
-        const isRecurring = document.getElementById('is_recurring');
-        const recurrenceField = document.getElementById('recurrenceField');
-
-        if (isDirect && productField) {
-            const toggleProduct = () => {
-                productField.style.display = isDirect.checked ? 'block' : 'none';
-                if (!isDirect.checked) {
-                    document.getElementById('product_id').value = '';
-                }
-            };
-            isDirect.addEventListener('change', toggleProduct);
-            toggleProduct(); // initial state
-        }
-
-        if (isRecurring && recurrenceField) {
-            const toggleRecurrence = () => {
-                recurrenceField.style.display = isRecurring.checked ? 'block' : 'none';
-                if (!isRecurring.checked) {
-                    document.getElementById('recurrence_frequency').value = '';
-                }
-            };
-            isRecurring.addEventListener('change', toggleRecurrence);
-            toggleRecurrence();
-        }
-    }
 
     /**
      * Attach delete handlers to all delete buttons.
@@ -93,7 +41,7 @@
                 // Show loading state
                 const originalHtml = this.innerHTML;
                 this.disabled = true;
-                this.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Deleting...';
+                this.innerHTML = '<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent mr-2"></span> Deleting...';
 
                 try {
                     const response = await fetch(`/costs/${costId}/delete`, {
@@ -111,16 +59,11 @@
                         const row = document.getElementById(`cost-row-${costId}`);
                         if (row) row.remove();
 
-                        // Update summary cards if needed (optional)
-                        // You could call an API to refresh totals, or just subtract the amount.
-                        // For simplicity, we reload the page after deletion to keep totals accurate.
-                        // Alternatively, you can update the totals manually.
+                        // Show success toast
                         showToast('Cost deleted successfully.', 'success');
 
-                        // Option 1: reload to refresh totals (simpler)
+                        // Optionally reload to refresh summary totals (simpler)
                         setTimeout(() => window.location.reload(), 1000);
-
-                        // Option 2: update totals manually (more complex, not shown)
                     } else {
                         showToast(data.error || 'Failed to delete cost.', 'danger');
                         this.disabled = false;
@@ -137,27 +80,34 @@
     }
 
     /**
-     * Show a Bootstrap toast notification.
+     * Show a custom toast notification using Alpine (or plain DOM).
+     * If Alpine is available, you can dispatch an event; otherwise, create a simple div.
      */
     function showToast(message, type = 'success') {
-        const toastId = 'toast-' + Date.now();
-        const toastHtml = `
-            <div id="${toastId}" class="toast align-items-center text-white bg-${type} border-0" role="alert" aria-live="assertive" aria-atomic="true">
-                <div class="d-flex">
-                    <div class="toast-body">
-                        ${message}
-                    </div>
-                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                </div>
-            </div>
-        `;
-        toastContainer.insertAdjacentHTML('beforeend', toastHtml);
-        const toastElement = document.getElementById(toastId);
-        const toast = new bootstrap.Toast(toastElement, { autohide: true, delay: 5000 });
-        toast.show();
-        toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
-    }
+        // If you're using Alpine, you could dispatch an event that a toast component listens to.
+        // For simplicity, we'll create a temporary toast element.
+        const toastContainer = document.getElementById('toastContainer');
+        if (!toastContainer) {
+            // Create container if not present
+            const container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
+            document.body.appendChild(container);
+        }
 
-    // Expose showToast globally for potential use elsewhere
-    window.showCostToast = showToast;
+        const toast = document.createElement('div');
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${
+            type === 'success' ? 'bg-green-500' : 'bg-red-500'
+        }`;
+        toast.textContent = message;
+
+        const container = document.getElementById('toastContainer');
+        container.appendChild(toast);
+
+        // Auto-remove after 3 seconds
+        setTimeout(() => {
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
+    }
 })();

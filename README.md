@@ -100,6 +100,8 @@ SESSION_COOKIE_SAMESITE=Lax
 - `scripts/manage_assets.py` (commands: `build`, `clean`, `validate`) honors `config/static_assets.json` for caching rules, responsive/resized images, and manifest generation.
 - Vendor assets are downloaded/validated by `scripts/download_deps.py`. `scripts/build_assets.sh` can still bootstrap directories when needed.
 
+Tailwind itself is driven through the PostCSS pipeline: `app/static/css/app.css` keeps just the `@tailwind` directives and `npm run tailwind:build` (or `flask tailwind-build`) compiles them into `app/static/css/styles.css` before the server starts. During layout work keep `npm run tailwind:watch` running so edits are rebuilt incrementally.
+
 ## REST API & Integration Surface
 
 - `app/api/__init__.py` registers Flask-RESTx namespaces. Each namespace (names match folder names under `app/api/v1/`) exposes request parsers, schemas, and an `api_docs` helper for shared responses.

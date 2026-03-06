@@ -1,117 +1,131 @@
-{% extends "_base.html" %}
+<!-- Stock Adjust Modal (Alpine) -->
+<div id="stockAdjustModal" x-data="{ open: false, product: null }"
+     x-show="open"
+     x-cloak
+     @open-stock-modal-alpine.window="open = true; product = $event.detail?.product || null"
+     @close-stock-modal.window="open = false"
+     @keydown.escape.window="open = false"
+     class="fixed inset-0 z-50 overflow-y-auto"
+     aria-labelledby="stockAdjustModalTitle"
+     role="dialog"
+     aria-modal="true">
+    <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+        <!-- Background overlay -->
+        <div x-show="open"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0"
+             x-transition:enter-end="opacity-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100"
+             x-transition:leave-end="opacity-0"
+             class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+             @click="open = false"
+             aria-hidden="true"></div>
 
-{% block title %}Adjust Stock - {{ product.name }}{% endblock %}
+        <!-- Modal panel -->
+        <div x-show="open"
+             x-transition:enter="ease-out duration-300"
+             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave="ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-lg font-medium text-gray-900" id="stockAdjustModalTitle">
+                        <i class="fas fa-boxes mr-2"></i>
+                        Adjust Stock
+                    </h3>
+                    <button type="button" @click="open = false" class="text-gray-400 hover:text-gray-600">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
 
-{% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Adjust Stock - {{ product.name }}</h2>
-        <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary">
-            <i class="fas fa-arrow-left"></i> Back to Inventory
-        </a>
-    </div>
+                <!-- Alert placeholder (hidden by default) -->
+                <div id="stockAdjustAlert" class="hidden p-4 rounded-md text-sm mb-4"></div>
 
-    <div class="row">
-        <div class="col-md-8 offset-md-2">
-            <div class="card">
-                <div class="card-body">
-                    <h5 class="card-title">Current Stock: {{ product.current_stock }} units</h5>
-                    
-                    <form method="POST" action="{{ url_for('products.adjust_stock', product_id=product.id) }}">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-3">
-                            {{ form.movement_type.label(class="form-label") }}
-                            {{ form.movement_type(class="form-select") }}
-                            {% for error in form.movement_type.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.quantity.label(class="form-label") }}
-                            <div class="input-group">
-                                {{ form.quantity(class="form-control", min="0.01", step="0.01") }}
-                                <span class="input-group-text">units</span>
-                            </div>
-                            {% for error in form.quantity.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.unit_cost.label(class="form-label") }}
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                {{ form.unit_cost(class="form-control", min="0.01", step="0.01", value=product.cogs_per_unit) }}
-                            </div>
-                            <small class="form-text text-muted">Cost per unit for this movement</small>
-                            {% for error in form.unit_cost.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="mb-3">
-                            {{ form.notes.label(class="form-label") }}
-                            {{ form.notes(class="form-control", rows="3") }}
-                            <small class="form-text text-muted">Optional notes about this movement</small>
-                            {% for error in form.notes.errors %}
-                                <div class="invalid-feedback d-block">{{ error }}</div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-outline-secondary me-md-2">
-                                Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Save Movement
+                <!-- Product info -->
+                <div class="mb-4 p-3 bg-gray-50 rounded-md">
+                    <h6 class="font-medium text-gray-900" id="productName"></h6>
+                    <p class="text-sm text-gray-500 mt-1">
+                        Current Stock: <span id="currentStock" class="font-medium">0</span>
+                    </p>
+                </div>
+
+                <form id="stockAdjustForm">
+                    <input type="hidden" id="productId" name="product_id">
+
+                    <div class="mb-4">
+                        <label for="movementType" class="block text-sm font-medium text-gray-700 mb-1">
+                            Adjustment Type <span class="text-red-600">*</span>
+                        </label>
+                        <select id="movementType" name="movement_type" required
+                                class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <option value="">Select type...</option>
+                            <option value="purchase">Purchase/Restock</option>
+                            <option value="adjustment">Manual Adjustment</option>
+                            <option value="return">Customer Return</option>
+                            <option value="damage">Damage/Loss</option>
+                            <option value="sale">Sale</option>
+                        </select>
+                        <p class="mt-1 text-xs text-red-600 hidden" id="movementTypeError">Please select an adjustment type</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="quantity" class="block text-sm font-medium text-gray-700 mb-1">
+                            Quantity <span class="text-red-600">*</span>
+                        </label>
+                        <div class="flex rounded-md shadow-sm">
+                            <button type="button" id="decreaseQty"
+                                    class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                            <input type="number" id="quantity" name="quantity"
+                                   class="block w-24 text-center border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                   min="1" value="1" required>
+                            <button type="button" id="increaseQty"
+                                    class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 hover:bg-gray-100">
+                                <i class="fas fa-plus"></i>
                             </button>
                         </div>
-                    </form>
-                </div>
+                        <p class="mt-1 text-xs text-gray-600">
+                            New stock will be: <span id="newStock" class="font-medium text-green-600">0</span>
+                        </p>
+                        <p class="mt-1 text-xs text-red-600 hidden" id="quantityError">Please enter a valid quantity</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="referenceNumber" class="block text-sm font-medium text-gray-700 mb-1">
+                            Reference Number
+                        </label>
+                        <input type="text" id="referenceNumber" name="reference_number"
+                               class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                               placeholder="e.g., PO-12345">
+                        <p class="mt-1 text-xs text-gray-500">Optional: Invoice, PO, or batch number</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">
+                            Notes
+                        </label>
+                        <textarea id="notes" name="notes" rows="3"
+                                  class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                  placeholder="Add any additional notes..."></textarea>
+                    </div>
+                </form>
             </div>
-            
-            <div class="card mt-4">
-                <div class="card-header">
-                    <h5 class="mb-0">Recent Movements</h5>
-                </div>
-                <div class="card-body">
-                    {% if product.movements %}
-                        <div class="table-responsive">
-                            <table class="table table-sm">
-                                <thead>
-                                    <tr>
-                                        <th>Date</th>
-                                        <th>Type</th>
-                                        <th>Qty</th>
-                                        <th>Unit Cost</th>
-                                        <th>Notes</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for movement in product.movements|sort(attribute='created_at', reverse=True)|slice(5) %}
-                                        <tr>
-                                            <td>{{ movement.created_at.strftime('%Y-%m-%d') }}</td>
-                                            <td>
-                                                <span class="badge {% if movement.quantity > 0 %}bg-success{% else %}bg-danger{% endif %}">
-                                                    {{ movement.movement_type|replace('_', ' ')|title }}
-                                                </span>
-                                            </td>
-                                            <td>{{ movement.quantity|abs }}</td>
-                                            <td>${{ "%.2f"|format(movement.unit_cost) }}</td>
-                                            <td>{{ movement.notes|truncate(30) if movement.notes else '-' }}</td>
-                                        </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    {% else %}
-                        <p class="text-muted mb-0">No recent movements found.</p>
-                    {% endif %}
-                </div>
+            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                <button type="button" id="saveStockAdjust"
+                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    <span class="spinner-border hidden animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" role="status"></span>
+                    <span class="btn-text">Save Adjustment</span>
+                </button>
+                <button type="button" @click="open = false"
+                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                    Cancel
+                </button>
             </div>
         </div>
     </div>
 </div>
-{% endblock %}

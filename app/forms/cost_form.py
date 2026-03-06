@@ -66,12 +66,18 @@ class CostForm(FlaskForm):
         validators=[DataRequired()]
     )
     
-    is_direct = BooleanField(
+    '''is_direct = BooleanField(
         'Direct Cost?',
         default=False,
         description="Is this cost directly attributable to a product?"
-    )
+    )'''
     
+    is_direct = BooleanField('Is Direct', render_kw={
+        'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded',
+        'x_ref': 'isDirect',
+        '@change': "$refs.productField.style.display = $event.target.checked ? 'block' : 'none'"
+    })
+
     is_tax_deductible = BooleanField(
         'Tax Deductible?',
         default=True,
@@ -98,8 +104,18 @@ class CostForm(FlaskForm):
     is_recurring = BooleanField(
         'Recurring Cost?',
         default=False,
-        description="Does this cost recur on a regular basis?"
+        description="Does this cost recur on a regular basis?",
+        render_kw={
+            'class': 'h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded',
+            '@change': "$refs.recurrenceField.style.display = $event.target.checked ? 'block' : 'none'"
+        }
     )
+
+    '''is_recurring = BooleanField(
+        'Recurring Cost?',
+        default=False,
+        description="Does this cost recur on a regular basis?"
+    )'''
     
     recurrence_frequency = SelectField(
         'Recurrence',

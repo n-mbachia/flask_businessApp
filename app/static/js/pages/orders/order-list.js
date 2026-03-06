@@ -6,19 +6,8 @@
     'use strict';
 
     document.addEventListener('DOMContentLoaded', function() {
-        initTooltips();
         attachCancelHandlers();
     });
-
-    // Initialize Bootstrap tooltips (also called after AJAX updates)
-    function initTooltips() {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-            if (!tooltipTriggerEl._tooltip) {
-                new bootstrap.Tooltip(tooltipTriggerEl);
-            }
-        });
-    }
 
     // Attach cancel button handlers (delegation for dynamically loaded rows)
     function attachCancelHandlers() {
@@ -76,38 +65,45 @@
         row.classList.remove('pending', 'processing', 'completed');
     }
 
-    // Toast notification system (reuses Bootstrap 5 toasts)
+    // Toast notification system
     function showToast(message, type = 'success') {
-        const toastContainer = document.getElementById('toastContainer');
+        const toastContainerId = 'toastContainer';
+        let toastContainer = document.getElementById(toastContainerId);
         if (!toastContainer) {
-            // Create container if not exists
-            const container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
-            document.body.appendChild(container);
+            toastContainer = document.createElement('div');
+            toastContainer.id = toastContainerId;
+            toastContainer.className = 'fixed bottom-4 right-4 z-50 flex flex-col gap-3';
+            document.body.appendChild(toastContainer);
         }
+
+        const typeStyles = {
+            success: 'bg-emerald-600',
+            danger: 'bg-rose-600',
+            warning: 'bg-amber-500',
+            info: 'bg-sky-600'
+        };
+
         const toastEl = document.createElement('div');
-        toastEl.className = `toast align-items-center text-white bg-${type} border-0`;
-        toastEl.setAttribute('role', 'alert');
-        toastEl.setAttribute('aria-live', 'assertive');
-        toastEl.setAttribute('aria-atomic', 'true');
+        toastEl.className = `flex items-start justify-between gap-3 px-4 py-3 rounded-2xl shadow-xl text-white text-sm ${typeStyles[type] || typeStyles.info}`;
         toastEl.innerHTML = `
-            <div class="d-flex">
-                <div class="toast-body">
-                    ${message}
-                </div>
-                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-            </div>
+            <span class="flex-1">${message}</span>
+            <button type="button" class="text-white opacity-70 hover:opacity-100 focus:outline-none" aria-label="Close">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
         `;
-        document.getElementById('toastContainer').appendChild(toastEl);
-        const toast = new bootstrap.Toast(toastEl, { autohide: true, delay: 5000 });
-        toast.show();
-        toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+
+        toastEl.querySelector('button').addEventListener('click', () => {
+            toastEl.remove();
+        });
+
+        toastContainer.appendChild(toastEl);
+        setTimeout(() => toastEl.remove(), 5000);
     }
 
     // Expose for external use (e.g., after HTMX swap)
     window.OrderList = {
-        initTooltips,
         attachCancelHandlers,
         showToast
     };

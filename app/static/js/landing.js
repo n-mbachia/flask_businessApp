@@ -50,9 +50,9 @@ class LandingPage {
      * Setup animations
      */
     setupAnimations() {
-        // Animate hero elements on load
-        const heroTitle = document.querySelector('.hero-section .display-4');
-        const heroLead = document.querySelector('.hero-section .lead');
+        // Animate hero elements on load (update selectors to Tailwind classes)
+        const heroTitle = document.querySelector('.hero-section .text-4xl'); // example
+        const heroLead = document.querySelector('.hero-section .text-lg');
         const heroButtons = document.querySelectorAll('.hero-section .btn');
 
         if (heroTitle) {
@@ -86,7 +86,7 @@ class LandingPage {
     handleParallax() {
         const scrolled = window.pageYOffset;
         const heroSection = document.querySelector('.hero-section');
-        
+
         if (heroSection && scrolled < heroSection.offsetHeight) {
             const speed = 0.5;
             heroSection.style.transform = `translateY(${scrolled * speed}px)`;
@@ -98,7 +98,7 @@ class LandingPage {
      */
     setupFormInteractions() {
         const ctaButtons = document.querySelectorAll('.btn-lg, .btn-light');
-        
+
         ctaButtons.forEach(button => {
             button.addEventListener('click', (e) => {
                 this.handleCTAClick(e, button);
@@ -118,7 +118,7 @@ class LandingPage {
      */
     handleCTAClick(e, button) {
         const buttonText = button.textContent.trim();
-        
+
         // Track analytics
         this.trackEvent('cta_click', {
             button_text: buttonText,
@@ -129,7 +129,7 @@ class LandingPage {
         // Add loading state
         const originalContent = button.innerHTML;
         button.disabled = true;
-        button.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Loading...';
+        button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
 
         // Simulate navigation delay
         setTimeout(() => {
@@ -256,7 +256,7 @@ class LandingPage {
      * Track custom events
      */
     trackEvent(eventName, data = {}) {
-        // Send to analytics service
+        // Send to analytics service if available
         if (typeof gtag !== 'undefined') {
             gtag('event', eventName, data);
         }
@@ -300,16 +300,16 @@ class LandingPage {
                     opacity: 0;
                 }
             }
-            
+
             .animate-in {
                 animation: fadeInUp 0.6s ease-out;
             }
-            
+
             .lazy-load {
                 filter: blur(5px);
                 transition: filter 0.3s ease;
             }
-            
+
             .lazy-load.loaded {
                 filter: blur(0);
             }
@@ -323,11 +323,11 @@ class LandingPage {
     static init() {
         // Add animation styles
         const landingPage = new LandingPage();
-        
+
         // Expose global functions
         window.scrollToSection = (sectionId) => landingPage.scrollToSection(sectionId);
         window.trackLandingEvent = (eventName, data) => landingPage.trackEvent(eventName, data);
-        
+
         // Add loading styles
         landingPage.addAnimationStyles();
     }

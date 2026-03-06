@@ -36,7 +36,7 @@ class MetricsCard {
      */
     setupEventListeners() {
         if (this.options.clickable) {
-            this.element.classList.add('metrics-card-clickable');
+            this.element.classList.add('cursor-pointer');
             this.element.addEventListener('click', (e) => {
                 this.handleClick(e);
             });
@@ -176,7 +176,7 @@ class MetricsCard {
         if (!comparisonElement) return;
         
         const positive = comparisonValue >= 0;
-        const good = positive if positiveIsGood else !positive;
+        const good = positive ? positiveIsGood : !positiveIsGood;
         const trendClass = good ? 'positive' : 'negative';
         const direction = positive ? 'up' : 'down';
         
@@ -196,7 +196,7 @@ class MetricsCard {
      */
     showLoading() {
         this.isLoading = true;
-        this.element.classList.add('metrics-card-loading');
+        this.element.classList.add('opacity-50', 'pointer-events-none');
     }
 
     /**
@@ -204,7 +204,7 @@ class MetricsCard {
      */
     hideLoading() {
         this.isLoading = false;
-        this.element.classList.remove('metrics-card-loading');
+        this.element.classList.remove('opacity-50', 'pointer-events-none');
     }
 
     /**
@@ -410,24 +410,32 @@ class MetricsCard {
     }
 
     /**
-     * Show notification
+     * Show notification (Tailwind toast)
      */
     showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.body.appendChild(notification);
-        
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
+            document.body.appendChild(container);
+        }
+        const toastId = 'toast-' + Date.now();
+        const typeClasses = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        }[type] || 'bg-gray-500';
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${typeClasses}`;
+        toast.textContent = message;
+        container.appendChild(toast);
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 5000);
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     /**
@@ -441,7 +449,7 @@ class MetricsCard {
         this.element.removeEventListener('keydown', this.handleKeydown);
         
         // Remove classes
-        this.element.classList.remove('metrics-card-clickable', 'metrics-card-loading');
+        this.element.classList.remove('cursor-pointer', 'opacity-50', 'pointer-events-none');
     }
 }
 

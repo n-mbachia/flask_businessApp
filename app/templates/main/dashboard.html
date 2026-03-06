@@ -4,7 +4,7 @@
 
 {% block head %}
 {{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/dashboard.css') }}">
+<!-- No external CSS needed – all styling via Tailwind -->
 {% endblock %}
 
 {% block content %}
@@ -14,66 +14,68 @@ console.log('Chart data from template:', {{ chart_data|tojson|safe }});
 console.log('Metrics from template:', {{ metrics|tojson|safe }});
 </script>
 
-<div id="dashboard-page" class="dashboard-page container-fluid py-4" data-chart-data='{{ chart_data|tojson|safe }}'>
+<div id="dashboard-page" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" data-chart-data='{{ chart_data|tojson|safe }}'>
     <!-- Hero & Briefs -->
-    <section class="dashboard-hero card shadow-sm mb-4">
-        <div class="card-body">
-            <div class="row gx-4 gy-3 align-items-center">
-                <div class="col-lg-5">
-                    <span class="badge bg-white text-dark mb-2">Financial control center</span>
-                    <h1 class="dashboard-title h2 mb-1 text-capitalize">Business Dashboard</h1>
-                    <p class="dashboard-subtitle text-muted mb-3">A modern cockpit for revenue, profitability, and cash insights.</p>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <div class="btn-group" role="group" aria-label="Select reporting period">
-                            {% for p, days in valid_periods.items() %}
-                            <a href="{{ url_for('main.dashboard', period=p) }}"
-                               data-period="{{ p }}"
-                               class="btn btn-sm btn-outline-secondary {% if p == period %}active{% endif %}">
-                                {{ p|upper }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                        <button type="button" id="refreshDashboard" class="btn btn-sm btn-primary" aria-label="Refresh dashboard data">
-                            <i class="fas fa-sync-alt me-1" aria-hidden="true"></i>
-                            Refresh
-                        </button>
-                        <span class="text-muted small" aria-live="polite">Last updated: {{ now.strftime('%Y-%m-%d %H:%M') }}</span>
-                    </div>
-                </div>
-                <div class="col-lg-7">
-                    <div class="briefs-grid row row-cols-1 row-cols-md-2 g-3">
-                        {% for brief in briefs %}
-                        <article class="brief-card col card border-0 h-100 shadow-sm" data-chart-target="{{ brief.chart_target }}" role="button" tabindex="0" aria-label="{{ brief.title }}">
-                            <div class="brief-card-body d-flex gap-3 align-items-start">
-                                <div class="brief-icon rounded-circle d-flex align-items-center justify-content-center fs-5">
-                                    <i class="{{ brief.icon }}"></i>
-                                </div>
-                                <div class="w-100">
-                                    <div class="d-flex justify-content-between align-items-center mb-1">
-                                        <small class="text-uppercase text-muted fw-semibold">{{ brief.badge }}</small>
-                                        <span class="brief-trend text-{{ 'success' if brief.positive else 'danger' }}">
-                                            <i class="fas fa-arrow-{{ 'up' if brief.positive else 'down' }} me-1"></i>
-                                            {% if brief.trend_format == 'percent' %}
-                                            {{ "%+.1f"|format(brief.trend) }}%
-                                            {% elif brief.trend_format == 'currency' %}
-                                            ${{ "%+.2f"|format(brief.trend) }}
-                                            {% else %}
-                                            {{ "%+.1f"|format(brief.trend) }}
-                                            {% endif %}
-                                        </span>
-                                    </div>
-                                    <div class="brief-title d-flex align-items-baseline gap-1">
-                                        <span class="brief-unit text-muted">{{ brief.unit }}</span>
-                                        <strong class="fs-5">{{ "%0.2f"|format(brief.value) }}</strong>
-                                    </div>
-                                    <p class="mb-1 fw-semibold">{{ brief.title }}</p>
-                                    <p class="text-muted small mb-0">{{ brief.detail }}</p>
-                                    <small class="text-muted">{{ brief.trend_label }}</small>
-                                </div>
-                            </div>
-                        </article>
+    <section class="bg-white shadow rounded-lg p-6 mb-6">
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            <!-- Left Column -->
+            <div class="lg:col-span-5">
+                <span class="inline-block bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded mb-2">Financial control center</span>
+                <h1 class="text-3xl font-bold text-gray-900 capitalize mb-2">Business Dashboard</h1>
+                <p class="text-gray-500 mb-4">A modern cockpit for revenue, profitability, and cash insights.</p>
+                <div class="flex flex-wrap items-center gap-3">
+                    <!-- Period Selector -->
+                    <div class="flex bg-gray-100 rounded-md p-1">
+                        {% for p, days in valid_periods.items() %}
+                        <a href="{{ url_for('main.dashboard', period=p) }}"
+                           data-period="{{ p }}"
+                           class="px-3 py-1 text-sm font-medium rounded-md {% if p == period %}bg-white text-gray-900 shadow{% else %}text-gray-600 hover:text-gray-900{% endif %} transition">
+                            {{ p|upper }}
+                        </a>
                         {% endfor %}
                     </div>
+                    <button type="button" id="refreshDashboard" class="inline-flex items-center px-3 py-1 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700">
+                        <i class="fas fa-sync-alt mr-1"></i> Refresh
+                    </button>
+                    <span class="text-gray-500 text-sm" aria-live="polite">Last updated: {{ now.strftime('%Y-%m-%d %H:%M') }}</span>
+                </div>
+            </div>
+
+            <!-- Right Column – Briefs Grid -->
+            <div class="lg:col-span-7">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {% for brief in briefs %}
+                    <div class="brief-card bg-white border border-gray-200 rounded-lg p-4 shadow-sm hover:shadow-md transition cursor-pointer"
+                         data-chart-target="{{ brief.chart_target }}" tabindex="0" aria-label="{{ brief.title }}">
+                        <div class="flex gap-3">
+                            <div class="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-lg">
+                                <i class="{{ brief.icon }} text-gray-600"></i>
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex justify-between items-center mb-1">
+                                    <small class="text-xs font-semibold text-gray-500 uppercase">{{ brief.badge }}</small>
+                                    <span class="brief-trend text-xs {% if brief.positive %}text-green-600{% else %}text-red-600{% endif %}">
+                                        <i class="fas fa-arrow-{{ 'up' if brief.positive else 'down' }} mr-1"></i>
+                                        {% if brief.trend_format == 'percent' %}
+                                        {{ "%+.1f"|format(brief.trend) }}%
+                                        {% elif brief.trend_format == 'currency' %}
+                                        ${{ "%+.2f"|format(brief.trend) }}
+                                        {% else %}
+                                        {{ "%+.1f"|format(brief.trend) }}
+                                        {% endif %}
+                                    </span>
+                                </div>
+                                <div class="flex items-baseline gap-1">
+                                    <span class="text-gray-500 text-sm">{{ brief.unit }}</span>
+                                    <strong class="text-lg">{{ "%0.2f"|format(brief.value) }}</strong>
+                                </div>
+                                <p class="font-medium">{{ brief.title }}</p>
+                                <p class="text-gray-500 text-sm">{{ brief.detail }}</p>
+                                <small class="text-gray-400">{{ brief.trend_label }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
                 </div>
             </div>
         </div>
@@ -81,220 +83,173 @@ console.log('Metrics from template:', {{ metrics|tojson|safe }});
 
     <!-- Alerts Section (if any) -->
     {% if alerts %}
-    <section class="mb-4" aria-label="Alerts and notifications">
-        <div class="card border-0 shadow-sm">
-            <div class="card-header bg-transparent border-0">
-                <h3 class="card-title h6 mb-0"><i class="fas fa-exclamation-triangle text-warning me-2"></i>Alerts</h3>
-            </div>
-            <div class="card-body pt-0">
-                <ul class="list-group list-group-flush">
-                    {% for alert in alerts %}
-                    <li class="list-group-item px-0 d-flex align-items-start gap-2">
-                        <i class="fas fa-exclamation-circle text-warning mt-1" aria-hidden="true"></i>
-                        <div>
-                            <p class="mb-0 fw-semibold">{{ alert.product_name|default('Inventory alert') }}</p>
-                            <p class="mb-0 text-muted small">{{ alert.message }}</p>
-                        </div>
-                    </li>
-                    {% endfor %}
-                </ul>
-            </div>
+    <section class="mb-6">
+        <div class="bg-white shadow rounded-lg p-4">
+            <h3 class="text-md font-semibold mb-3 flex items-center">
+                <i class="fas fa-exclamation-triangle text-yellow-500 mr-2"></i>Alerts
+            </h3>
+            <ul class="divide-y divide-gray-200">
+                {% for alert in alerts %}
+                <li class="py-3 flex items-start gap-3">
+                    <i class="fas fa-exclamation-circle text-yellow-500 mt-1"></i>
+                    <div>
+                        <p class="font-medium">{{ alert.product_name|default('Inventory alert') }}</p>
+                        <p class="text-gray-500 text-sm">{{ alert.message }}</p>
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
         </div>
     </section>
     {% endif %}
 
     <!-- Main Charts Row -->
-    <section class="row g-4 mb-4">
-        <div class="col-xl-5">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h3 class="card-title h6 mb-0">Revenue Trend</h3>
-                    <small class="text-muted">Monthly</small>
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+        <div class="lg:col-span-5">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold">Revenue Trend</h3>
+                    <small class="text-gray-500">Monthly</small>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart dashboard-chart--large">
-                        <canvas id="revenueChart" 
-                                aria-label="Revenue trend chart" 
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-64">
+                    <canvas id="revenueChart" aria-label="Revenue trend chart" role="img"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h3 class="card-title h6 mb-0">Profitability Margins</h3>
-                    <small class="text-muted">Gross vs net</small>
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold">Profitability Margins</h3>
+                    <small class="text-gray-500">Gross vs net</small>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart dashboard-chart--large">
-                        <canvas id="profitabilityChart" 
-                                aria-label="Profitability margin chart" 
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-64">
+                    <canvas id="profitabilityChart" aria-label="Profitability margin chart" role="img"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-3">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Cash Flow Trend</h3>
-                    <small class="text-muted">Cash in/out vs operating cash flow</small>
+        <div class="lg:col-span-3">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <div class="mb-3">
+                    <h3 class="text-md font-semibold">Cash Flow Trend</h3>
+                    <small class="text-gray-500">Cash in/out vs operating cash flow</small>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart dashboard-chart--compact">
-                        <canvas id="cashFlowTrendChart"
-                                aria-label="Cash flow trend chart"
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-48">
+                    <canvas id="cashFlowTrendChart" aria-label="Cash flow trend chart" role="img"></canvas>
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Secondary Charts and Top Products -->
-    <section class="row g-4 mb-4">
-        <div class="col-xl-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h3 class="card-title h6 mb-0">Expenses Breakdown</h3>
-                    <span class="badge bg-light text-dark">Total ${{ "%0.2f"|format(metrics.expenses.total_expenses|default(0)) }}</span>
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <div class="flex justify-between items-center mb-3">
+                    <h3 class="text-md font-semibold">Expenses Breakdown</h3>
+                    <span class="bg-gray-100 text-gray-800 text-xs font-medium px-2 py-1 rounded">Total ${{ "%0.2f"|format(metrics.expenses.total_expenses|default(0)) }}</span>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart">
-                        <canvas id="expensesChart" 
-                                aria-label="Expense breakdown chart" 
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-64">
+                    <canvas id="expensesChart" aria-label="Expense breakdown chart" role="img"></canvas>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Cash Flow Position</h3>
-                    <small class="text-muted">Operating cash, inflows and outflows</small>
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <div class="mb-3">
+                    <h3 class="text-md font-semibold">Cash Flow Position</h3>
+                    <small class="text-gray-500">Operating cash, inflows and outflows</small>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart">
-                        <canvas id="cashFlowChart" 
-                                aria-label="Cash flow chart" 
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-48">
+                    <canvas id="cashFlowChart" aria-label="Cash flow chart" role="img"></canvas>
                 </div>
-                <div class="card-footer bg-transparent border-0 pt-2">
-                    <div class="d-flex flex-wrap gap-3 small text-muted">
-                        <span>Cash In: ${{ "%0.2f"|format(metrics.cash_flow.cash_in|default(0)) }}</span>
-                        <span>Cash Out: ${{ "%0.2f"|format(metrics.cash_flow.cash_out|default(0)) }}</span>
-                        <span>Burn Rate: ${{ "%0.2f"|format(metrics.cash_flow.cash_burn_rate|default(0)) }}/mo</span>
-                    </div>
+                <div class="mt-4 flex flex-wrap gap-3 text-sm text-gray-600">
+                    <span>Cash In: ${{ "%0.2f"|format(metrics.cash_flow.cash_in|default(0)) }}</span>
+                    <span>Cash Out: ${{ "%0.2f"|format(metrics.cash_flow.cash_out|default(0)) }}</span>
+                    <span>Burn Rate: ${{ "%0.2f"|format(metrics.cash_flow.cash_burn_rate|default(0)) }}/mo</span>
                 </div>
             </div>
         </div>
 
-        <div class="col-xl-4">
-            <div class="card h-100 border-0 shadow-sm d-flex flex-column">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Top Products by Profit</h3>
-                    <small class="text-muted">Performance leaders</small>
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full flex flex-col">
+                <div class="mb-3">
+                    <h3 class="text-md font-semibold">Top Products by Profit</h3>
+                    <small class="text-gray-500">Performance leaders</small>
                 </div>
-                <div class="card-body">
-                    <div class="dashboard-chart mb-3">
-                        <canvas id="topProductsChart" 
-                                aria-label="Top products by profit chart" 
-                                role="img">
-                        </canvas>
-                    </div>
+                <div class="h-40 mb-3">
+                    <canvas id="topProductsChart" aria-label="Top products by profit chart" role="img"></canvas>
                 </div>
-                <div class="card-footer bg-transparent border-0 pt-0 mt-auto">
-                    <ul class="list-group list-group-flush">
-                        {% for product in top_products %}
-                        <li class="list-group-item px-0">
-                            <div class="d-flex justify-content-between align-items-center">
-                                <span class="text-truncate pe-2">{{ product.name|truncate(36) }}</span>
-                                <span class="fw-semibold text-{{ 'success' if product.profit|default(0) >= 0 else 'danger' }}">
-                                    ${{ "%0.2f"|format(product.profit|default(0)) }}
-                                </span>
-                            </div>
-                            <div class="small text-muted">Margin: {{ "%0.1f"|format(product.margin|default(product.net_margin|default(0))) }}%</div>
-                        </li>
-                        {% else %}
-                        <li class="list-group-item text-muted">No product data available</li>
-                        {% endfor %}
-                    </ul>
-                </div>
+                <ul class="divide-y divide-gray-200 flex-1">
+                    {% for product in top_products %}
+                    <li class="py-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm truncate">{{ product.name|truncate(36) }}</span>
+                            <span class="text-sm font-semibold {% if product.profit|default(0) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">
+                                ${{ "%0.2f"|format(product.profit|default(0)) }}
+                            </span>
+                        </div>
+                        <div class="text-xs text-gray-500">Margin: {{ "%0.1f"|format(product.margin|default(product.net_margin|default(0))) }}%</div>
+                    </li>
+                    {% else %}
+                    <li class="py-3 text-gray-500 text-center">No product data available</li>
+                    {% endfor %}
+                </ul>
             </div>
         </div>
     </section>
 
     <!-- Detailed Tables Section -->
-    <section class="row g-4 mb-4">
-        <div class="col-lg-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Revenue Details</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm table-borderless align-middle mb-0">
-                        <tbody>
-                            <tr><td class="ps-0">Total Revenue</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.revenue.total_revenue|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Revenue Growth</td><td class="text-end fw-semibold text-{{ 'success' if metrics.revenue.revenue_growth|default(0) >= 0 else 'danger' }}">{{ "%+.1f"|format(metrics.revenue.revenue_growth|default(0)) }}%</td></tr>
-                            <tr><td class="ps-0">Avg Order Value</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.revenue.average_order_value|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Recurring Revenue</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.revenue.recurring_revenue|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Active Customers</td><td class="text-end fw-semibold">{{ metrics.revenue.customer_count|default(0) }}</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+    <section class="grid grid-cols-1 lg:grid-cols-12 gap-6 mb-6">
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <h3 class="text-md font-semibold mb-3">Revenue Details</h3>
+                <table class="min-w-full text-sm">
+                    <tbody class="divide-y divide-gray-200">
+                        <tr><td class="py-2 pl-0">Total Revenue</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.revenue.total_revenue|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Revenue Growth</td><td class="py-2 text-right font-semibold {% if metrics.revenue.revenue_growth|default(0) >= 0 %}text-green-600{% else %}text-red-600{% endif %}">{{ "%+.1f"|format(metrics.revenue.revenue_growth|default(0)) }}%</td></tr>
+                        <tr><td class="py-2 pl-0">Avg Order Value</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.revenue.average_order_value|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Recurring Revenue</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.revenue.recurring_revenue|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Active Customers</td><td class="py-2 text-right font-semibold">{{ metrics.revenue.customer_count|default(0) }}</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="col-lg-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Profitability Details</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm table-borderless align-middle mb-0">
-                        <tbody>
-                            <tr><td class="ps-0">Gross Profit</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.profitability.gross_profit|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Operating Profit</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.profitability.operating_profit|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Net Profit</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.profitability.net_profit|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">ROI</td><td class="text-end fw-semibold">{{ "%0.1f"|format(metrics.profitability.roi|default(0)) }}%</td></tr>
-                            <tr><td class="ps-0">Break-even</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.profitability.break_even_point|default(0)) }}</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <h3 class="text-md font-semibold mb-3">Profitability Details</h3>
+                <table class="min-w-full text-sm">
+                    <tbody class="divide-y divide-gray-200">
+                        <tr><td class="py-2 pl-0">Gross Profit</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.profitability.gross_profit|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Operating Profit</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.profitability.operating_profit|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Net Profit</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.profitability.net_profit|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">ROI</td><td class="py-2 text-right font-semibold">{{ "%0.1f"|format(metrics.profitability.roi|default(0)) }}%</td></tr>
+                        <tr><td class="py-2 pl-0">Break-even</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.profitability.break_even_point|default(0)) }}</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
-        <div class="col-lg-4">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0">
-                    <h3 class="card-title h6 mb-0">Liquidity Details</h3>
-                </div>
-                <div class="card-body">
-                    <table class="table table-sm table-borderless align-middle mb-0">
-                        <tbody>
-                            <tr><td class="ps-0">Current Assets</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.working_capital.current_assets|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Current Liabilities</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.working_capital.current_liabilities|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Working Capital</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.working_capital.working_capital|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Quick Ratio</td><td class="text-end fw-semibold">{{ "%0.2f"|format(metrics.working_capital.quick_ratio|default(0)) }}</td></tr>
-                            <tr><td class="ps-0">Burn Rate</td><td class="text-end fw-semibold">${{ "%0.2f"|format(metrics.cash_flow.cash_burn_rate|default(0)) }}/mo</td></tr>
-                        </tbody>
-                    </table>
-                </div>
+        <div class="lg:col-span-4">
+            <div class="bg-white shadow rounded-lg p-4 h-full">
+                <h3 class="text-md font-semibold mb-3">Liquidity Details</h3>
+                <table class="min-w-full text-sm">
+                    <tbody class="divide-y divide-gray-200">
+                        <tr><td class="py-2 pl-0">Current Assets</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.working_capital.current_assets|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Current Liabilities</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.working_capital.current_liabilities|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Working Capital</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.working_capital.working_capital|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Quick Ratio</td><td class="py-2 text-right font-semibold">{{ "%0.2f"|format(metrics.working_capital.quick_ratio|default(0)) }}</td></tr>
+                        <tr><td class="py-2 pl-0">Burn Rate</td><td class="py-2 text-right font-semibold">${{ "%0.2f"|format(metrics.cash_flow.cash_burn_rate|default(0)) }}/mo</td></tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>
 
+    <!-- Revenue by Source Table -->
     {% set revenue_breakdown = metrics.revenue.source_breakdown or {} %}
     {% set manual_summary = revenue_breakdown.get('manual', {}) %}
     {% set storefront_summary = revenue_breakdown.get('storefront', {}) %}
@@ -305,51 +260,47 @@ console.log('Metrics from template:', {{ metrics|tojson|safe }});
     {% set manual_percent = (manual_share / total_revenue_value * 100) if total_revenue_value > 0 else 0 %}
     {% set storefront_percent = (storefront_share / total_revenue_value * 100) if total_revenue_value > 0 else 0 %}
 
-    <section class="row g-4 mb-4">
-        <div class="col-12">
-            <div class="card h-100 border-0 shadow-sm">
-                <div class="card-header bg-transparent border-0 d-flex justify-content-between align-items-center">
-                    <h3 class="card-title h6 mb-0">Revenue by Source</h3>
-                    <span class="text-muted small">Storefront vs manual entries</span>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-sm table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th class="ps-0">Source</th>
-                                    <th class="text-end">Revenue</th>
-                                    <th class="text-end">Orders</th>
-                                    <th class="text-end">Customers</th>
-                                    <th class="text-end">Share</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td class="ps-0">Manual entries</td>
-                                    <td class="text-end fw-semibold">${{ "%0.2f"|format(manual_summary.get('revenue', 0.0)) }}</td>
-                                    <td class="text-end">{{ manual_summary.get('orders', 0) }}</td>
-                                    <td class="text-end">{{ manual_summary.get('customers', 0) }}</td>
-                                    <td class="text-end">{{ "%0.1f"|format(manual_percent) }}%</td>
-                                </tr>
-                                <tr>
-                                    <td class="ps-0">Storefront purchases</td>
-                                    <td class="text-end fw-semibold">${{ "%0.2f"|format(storefront_summary.get('revenue', 0.0)) }}</td>
-                                    <td class="text-end">{{ storefront_summary.get('orders', 0) }}</td>
-                                    <td class="text-end">{{ storefront_summary.get('customers', 0) }}</td>
-                                    <td class="text-end">{{ "%0.1f"|format(storefront_percent) }}%</td>
-                                </tr>
-                                <tr class="border-top fw-semibold">
-                                    <td class="ps-0">Combined</td>
-                                    <td class="text-end">${{ "%0.2f"|format(combined_summary.get('revenue', total_revenue_value)) }}</td>
-                                    <td class="text-end">{{ combined_summary.get('orders', (manual_summary.get('orders', 0) + storefront_summary.get('orders', 0))) }}</td>
-                                    <td class="text-end">{{ combined_summary.get('customers', (manual_summary.get('customers', 0) + storefront_summary.get('customers', 0))) }}</td>
-                                    <td class="text-end">100%</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+    <section class="mb-6">
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-center mb-3">
+                <h3 class="text-md font-semibold">Revenue by Source</h3>
+                <span class="text-gray-500 text-sm">Storefront vs manual entries</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left">Source</th>
+                            <th class="px-4 py-2 text-right">Revenue</th>
+                            <th class="px-4 py-2 text-right">Orders</th>
+                            <th class="px-4 py-2 text-right">Customers</th>
+                            <th class="px-4 py-2 text-right">Share</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+                        <tr>
+                            <td class="px-4 py-2">Manual entries</td>
+                            <td class="px-4 py-2 text-right font-semibold">${{ "%0.2f"|format(manual_summary.get('revenue', 0.0)) }}</td>
+                            <td class="px-4 py-2 text-right">{{ manual_summary.get('orders', 0) }}</td>
+                            <td class="px-4 py-2 text-right">{{ manual_summary.get('customers', 0) }}</td>
+                            <td class="px-4 py-2 text-right">{{ "%0.1f"|format(manual_percent) }}%</td>
+                        </tr>
+                        <tr>
+                            <td class="px-4 py-2">Storefront purchases</td>
+                            <td class="px-4 py-2 text-right font-semibold">${{ "%0.2f"|format(storefront_summary.get('revenue', 0.0)) }}</td>
+                            <td class="px-4 py-2 text-right">{{ storefront_summary.get('orders', 0) }}</td>
+                            <td class="px-4 py-2 text-right">{{ storefront_summary.get('customers', 0) }}</td>
+                            <td class="px-4 py-2 text-right">{{ "%0.1f"|format(storefront_percent) }}%</td>
+                        </tr>
+                        <tr class="border-t-2 font-semibold">
+                            <td class="px-4 py-2">Combined</td>
+                            <td class="px-4 py-2 text-right">${{ "%0.2f"|format(combined_summary.get('revenue', total_revenue_value)) }}</td>
+                            <td class="px-4 py-2 text-right">{{ combined_summary.get('orders', (manual_summary.get('orders', 0) + storefront_summary.get('orders', 0))) }}</td>
+                            <td class="px-4 py-2 text-right">{{ combined_summary.get('customers', (manual_summary.get('customers', 0) + storefront_summary.get('customers', 0))) }}</td>
+                            <td class="px-4 py-2 text-right">100%</td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </section>

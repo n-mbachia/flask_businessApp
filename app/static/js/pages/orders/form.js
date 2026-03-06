@@ -3,7 +3,7 @@
  * Handles customer/product search, order item management, inventory validation,
  * and order submission.
  */
-(function($, bootstrap) {
+(function($) {
     'use strict';
 
     const OrderForm = {
@@ -28,11 +28,10 @@
          */
         init: function() {
             console.log('[OrderForm] Initializing...');
-            this.cacheElements();
-            this.setupEventHandlers();
-            this.initializeTooltips();
-            this.updateOrderSummary();
-            this.updateCompleteOrderButton();
+        this.cacheElements();
+        this.setupEventHandlers();
+        this.updateOrderSummary();
+        this.updateCompleteOrderButton();
 
             // Set tax rate from template
             this.taxRate = parseFloat($('#tax-rate').data('rate')) || 0.16;
@@ -57,7 +56,6 @@
                 clearCustomerBtn: '#clearCustomer',
 
                 // Product
-                productSearchModal: '#productSearchModal',
                 productSearch: '#productSearch',
                 productSearchResults: '#productSearchResults',
                 noProductsFound: '#noProductsFound',
@@ -87,11 +85,6 @@
 
             for (const [key, selector] of Object.entries(selectors)) {
                 this.elements[key] = $(selector);
-            }
-
-            // Bootstrap modal instance
-            if (this.elements.productSearchModal.length) {
-                this.elements.productSearchModalInstance = new bootstrap.Modal(this.elements.productSearchModal[0]);
             }
 
             // Set API endpoints from data attributes
@@ -237,10 +230,7 @@
                 productSearch.val('');
                 productSearchResults.empty();
                 noProductsFound.hide();
-                if (this.elements.productSearchModalInstance) {
-                    this.elements.productSearchModalInstance.show();
-                    setTimeout(() => productSearch.focus(), 500);
-                }
+                setTimeout(() => productSearch.focus(), 250);
             });
 
             // Debounced search
@@ -767,34 +757,50 @@
         },
 
         /**
-         * Show Bootstrap toast alert
+         * Show a lightweight Tailwind toast
          */
         showAlert: function(title, message, type = 'info') {
-            const container = $('#alertContainer');
-            if (!container.length) {
-                $('body').append('<div id="alertContainer" style="position:fixed;top:20px;right:20px;z-index:1050;max-width:400px;"></div>');
+            const containerId = 'orderFormAlerts';
+            let container = document.getElementById(containerId);
+            if (!container) {
+                container = document.createElement('div');
+                container.id = containerId;
+                container.className = 'fixed top-6 right-6 z-50 flex flex-col gap-3';
+                document.body.appendChild(container);
             }
-            const id = 'alert-' + Date.now();
-            const html = `
-                <div id="${id}" class="alert alert-${type} alert-dismissible fade show" role="alert">
-                    <strong>${title}</strong> ${message}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+
+            const typeStyles = {
+                success: 'bg-green-600',
+                danger: 'bg-red-600',
+                warning: 'bg-yellow-600',
+                info: 'bg-blue-600'
+            };
+
+            const toast = document.createElement('div');
+            toast.className = `flex items-start justify-between gap-3 px-4 py-3 rounded-2xl shadow-lg text-sm text-white ${typeStyles[type] || typeStyles.info}`;
+            toast.innerHTML = `
+                <div class="flex-1">
+                    <strong class="block text-sm font-semibold">${title}</strong>
+                    <p class="text-sm">${message}</p>
                 </div>
+                <button class="text-white opacity-80 hover:opacity-100 focus:outline-none" aria-label="Close">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
             `;
-            $('#alertContainer').append(html);
+
+            const closeButton = toast.querySelector('button');
+            closeButton.addEventListener('click', () => {
+                toast.remove();
+            });
+
+            container.prepend(toast);
             setTimeout(() => {
-                $(`#${id}`).alert('close');
+                toast.remove();
             }, 5000);
         },
 
-        /**
-         * Initialize Bootstrap 5 tooltips
-         */
-        initializeTooltips: function() {
-            document.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-                new bootstrap.Tooltip(el);
-            });
-        }
     };
 
     // Debounce utility
@@ -811,4 +817,4 @@
         window.orderForm = Object.create(OrderForm).init();
     });
 
-})(jQuery, window.bootstrap);
+})(jQuery);

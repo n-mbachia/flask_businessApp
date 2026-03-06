@@ -1,254 +1,191 @@
-{% extends 'orders/base.html' %}
+{% extends "orders/base.html" %}
 
 {% block page_title %}Order Management{% endblock %}
 {% block header_title %}Order Management{% endblock %}
 
 {% block header_actions %}
-    <a href="{{ url_for('customer.create', next=url_for('orders.create')) }}" class="btn btn-outline-success">
-        <i class="fas fa-user-plus me-1"></i> New Customer
+    <a href="{{ url_for('customer.create', next=url_for('orders.create')) }}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+        <i class="fas fa-user-plus mr-1"></i> New Customer
     </a>
-    <button class="btn btn-outline-primary" type="button" data-bs-toggle="collapse" data-bs-target="#filtersCollapse" aria-expanded="false" aria-controls="filtersCollapse">
-        <i class="fas fa-filter me-1"></i> Filters
+    <button id="filtersToggle" class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" type="button" aria-expanded="false" aria-controls="filtersCollapse">
+        <i data-lucide="funnel" class="w-4 h-4 mr-1"></i> Filters
     </button>
-    <a href="{{ url_for('orders.export', **request.args) }}" class="btn btn-outline-secondary" id="exportBtn">
-        <i class="fas fa-download me-1"></i> Export
+    <a href="{{ url_for('orders.export', **request.args) }}" class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" id="exportBtn">
+        <i class="fas fa-download mr-1"></i> Export
     </a>
-    <a href="{{ url_for('orders.create') }}" class="btn btn-primary">
-        <i class="fas fa-plus me-1"></i> New Order
+    <a href="{{ url_for('orders.create') }}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+        <i class="fas fa-plus mr-1"></i> New Order
     </a>
 {% endblock %}
 
 {% block order_content %}
-<div class="card shadow-sm mb-4">
-<div class="card-body">
-        <div id="ordersPaginationData" data-current-page="{{ orders.page }}" data-total-pages="{{ orders.pages }}" class="d-none"></div>
-        <!-- Filter Collapse – no buttons here -->
-        <div class="collapse mb-4" id="filtersCollapse">
-            <form id="filtersForm" method="get" class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="status" class="form-label fw-semibold">Order Status</label>
-                    <select name="status" id="status" class="form-select">
-                        <option value="">All Statuses</option>
-                        {% for value, label in status_choices %}
-                        <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="customer_id" class="form-label fw-semibold">Customer</label>
-                    <select name="customer_id" id="customer_id" class="form-select">
-                        <option value="">All Customers</option>
-                        {% for customer in customers %}
-                        <option value="{{ customer.id }}" {% if customer_id == customer.id %}selected{% endif %}>
-                            {{ customer.name }}
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="date_from" class="form-label fw-semibold">From Date</label>
-                    <input type="date" class="form-control" id="date_from" name="date_from" value="{{ date_from or '' }}">
-                </div>
-                <div class="col-md-3">
-                    <label for="date_to" class="form-label fw-semibold">To Date</label>
-                    <input type="date" class="form-control" id="date_to" name="date_to" value="{{ date_to or '' }}">
-                </div>
-                <div class="col-12">
-                    <div class="input-group">
-                        <input type="text" class="form-control" placeholder="Search by order #, customer name, email..." name="q" value="{{ query or '' }}">
-                        <button class="btn btn-primary" type="submit">
-                            <i class="fas fa-search me-1"></i> Search
-                        </button>
-                        <a href="{{ url_for('orders.index') }}" class="btn btn-outline-secondary">
-                            <i class="fas fa-times me-1"></i> Clear
-                        </a>
-                    </div>
-                </div>
-            </form>
-        </div>
+<div class="bg-white shadow rounded-lg p-6">
+    <div id="ordersPaginationData" data-current-page="{{ orders.page }}" data-total-pages="{{ orders.pages }}" class="hidden"></div>
 
-        <div class="row g-3 mb-4">
-            <div class="col-md-8">
-                <div class="card shadow-sm border-0 h-100">
-                    <div class="card-body d-flex flex-column">
-                        <div class="d-flex justify-content-between align-items-start mb-3">
-                            <div>
-                                <h6 class="mb-1">Customer intelligence</h6>
-                                <p class="text-muted small mb-0">Track registered buyers and guest checkouts, then jump to the full customer directory.</p>
-                            </div>
-                            <a href="{{ url_for('customer.index') }}" class="btn btn-sm btn-outline-info">
-                                <i class="fas fa-users me-1"></i> View customers
-                            </a>
-                        </div>
-                        <div class="row text-center gy-2">
-                            <div class="col-4">
-                                <div class="text-muted small text-uppercase mb-1">Total</div>
-                                <div class="fs-4 fw-semibold">{{ customer_stats.total }}</div>
-                                <div class="text-success small">Registered</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted small text-uppercase mb-1">Active</div>
-                                <div class="fs-4 fw-semibold">{{ customer_stats.active }}</div>
-                                <div class="text-success small">Engaged</div>
-                            </div>
-                            <div class="col-4">
-                                <div class="text-muted small text-uppercase mb-1">Guests</div>
-                                <div class="fs-4 fw-semibold">{{ customer_stats.guests }}</div>
-                                <div class="text-warning small">Guest orders</div>
-                            </div>
-                        </div>
-                        <div class="row text-center gy-2 mt-3">
-                            <div class="col-6">
-                                <div class="text-muted small text-uppercase mb-1">Avg Order Value</div>
-                                <div class="fs-4 fw-semibold">${{ "%.2f"|format(customer_insights.avg_order_value or 0) }}</div>
-                                <div class="text-muted small">Completed orders only</div>
-                            </div>
-                            <div class="col-6">
-                                <div class="text-muted small text-uppercase mb-1">Repeat Rate</div>
-                                <div class="fs-4 fw-semibold">{{ customer_insights.repeat_rate }}%</div>
-                                <div class="text-muted small">Customers with >1 order</div>
-                            </div>
-                        </div>
-                        <div class="row text-center mt-3">
-                            <div class="col">
-                                <div class="text-muted small text-uppercase mb-1">Lifetime revenue</div>
-                                <div class="fs-4 fw-semibold">${{ "%.2f"|format(customer_insights.total_revenue or 0) }}</div>
-                                <div class="text-muted small">Avg per customer ${{ "%.2f"|format(customer_insights.avg_lifetime_value or 0) }}</div>
-                            </div>
-                        </div>
-                        <div class="mt-3">
-                            <div class="d-flex justify-content-between align-items-center mb-2">
-                                <span class="text-muted small text-uppercase fw-semibold">Top customers</span>
-                                <span class="text-muted small">{{ top_customers|length }} tracked</span>
-                            </div>
-                            {% if top_customers %}
-                            <ul class="list-group list-group-flush">
-                                {% for customer in top_customers %}
-                                <li class="list-group-item py-2 d-flex justify-content-between align-items-center">
-                                    <div>
-                                        <strong>{{ customer.name }}</strong>
-                                        <div class="small text-muted">
-                                            {{ customer.order_count }} order{% if customer.order_count != 1 %}s{% endif %}
-                                            · Avg ${{ "%.2f"|format(customer.avg_order_value or 0) }}
-                                            {% if customer.last_order_date %}
-                                            · Last {{ customer.last_order_date.strftime('%b %d, %Y') }}
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    <span class="badge bg-primary rounded-pill">${{ "%.2f"|format(customer.revenue or 0) }}</span>
-                                </li>
-                                {% endfor %}
-                            </ul>
-                            {% else %}
-                            <div class="text-muted small">No customer purchases recorded yet.</div>
-                            {% endif %}
-                        </div>
-                    </div>
+    <!-- Filter Collapse -->
+    <div id="filtersCollapse" class="hidden mb-6">
+        <form id="filtersForm" method="get" class="grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+            <div>
+                <label for="status" class="block text-sm font-medium text-gray-700 mb-1">Order Status</label>
+                <select name="status" id="status" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">All Statuses</option>
+                    {% for value, label in status_choices %}
+                    <option value="{{ value }}" {% if status == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="customer_id" class="block text-sm font-medium text-gray-700 mb-1">Customer</label>
+                <select name="customer_id" id="customer_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                    <option value="">All Customers</option>
+                    {% for customer in customers %}
+                    <option value="{{ customer.id }}" {% if customer_id == customer.id %}selected{% endif %}>
+                        {{ customer.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="date_from" class="block text-sm font-medium text-gray-700 mb-1">From Date</label>
+                <input type="date" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" id="date_from" name="date_from" value="{{ date_from or '' }}">
+            </div>
+            <div>
+                <label for="date_to" class="block text-sm font-medium text-gray-700 mb-1">To Date</label>
+                <input type="date" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" id="date_to" name="date_to" value="{{ date_to or '' }}">
+            </div>
+            <div>
+                <div class="flex">
+                    <input type="text" class="flex-1 rounded-l-md border border-gray-300 px-3 py-2 text-sm focus:ring-blue-500 focus:border-blue-500" placeholder="Search..." name="q" value="{{ query or '' }}">
+                    <button class="inline-flex items-center px-3 py-2 border border-l-0 border-gray-300 rounded-r-md bg-gray-50 text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" type="submit">
+                        <i class="fas fa-search"></i>
+                    </button>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card border-0 h-100">
-                    <div class="card-body text-center">
-                        <i class="fas fa-user-friends fa-2x text-secondary mb-2"></i>
-                        <h6 class="mb-1">Guest shoppers</h6>
-                        <p class="text-muted small mb-3">
-                            Guest orders are captured here—turn them into customers by saving their info on the customer page.
-                        </p>
-                        <a href="{{ url_for('customer.index') }}" class="btn btn-sm btn-outline-primary">
-                            Go to customer analytics
-                        </a>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Orders Table -->
-        <div class="table-responsive">
-            <table class="table table-hover align-middle" id="ordersTable">
-                <thead class="table-light">
-                    <tr>
-                        <th>Order #</th>
-                        <th>Date</th>
-                        <th>Customer</th>
-                        <th>Status</th>
-                        <th class="text-end">Total</th>
-                        <th class="text-end">Actions</th>
-                    </tr>
-                </thead>
-                <tbody id="ordersTableBody">
-                    {% include 'orders/_order_list.html' %}
-                </tbody>
-            </table>
-        </div>
-
-        <!-- Loading indicator (if using infinite scroll) -->
-        <div id="infiniteScrollLoader" class="text-center py-3 d-none">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading more orders...</span>
-            </div>
-        </div>
-
-        <!-- Pagination fallback -->
-        {% if orders.pages > 1 %}
-        <nav aria-label="Page navigation" class="mt-4">
-            <ul class="pagination justify-content-center">
-                {{ pagination.links|safe }}
-            </ul>
-        </nav>
-        {% endif %}
+        </form>
     </div>
-</div>
-{% endblock %}
 
-{% block styles %}
-{{ super() }}
-<style>
-    /* Optional modern table styling */
-    .table th {
-        font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.75rem;
-        letter-spacing: 0.5px;
-        color: #6c757d;
-    }
-    .badge-order {
-        font-size: 0.75rem;
-        padding: 0.35em 0.65em;
-        font-weight: 500;
-    }
-    .badge-payment {
-        font-size: 0.7rem;
-        padding: 0.25em 0.5em;
-    }
-    .action-btn {
-        width: 32px;
-        height: 32px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 0.375rem;
-        transition: all 0.2s;
-    }
-    .action-btn:hover {
-        background-color: #f8f9fa;
-    }
-    .action-btn[disabled] {
-        opacity: 0.4;
-        pointer-events: none;
-    }
-</style>
+    <!-- Customer Intelligence Card -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+        <div class="lg:col-span-2 bg-gray-50 border border-gray-200 rounded-lg p-4">
+            <div class="flex justify-between items-start mb-4">
+                <div>
+                    <h6 class="font-medium">Customer intelligence</h6>
+                    <p class="text-sm text-gray-500">Track registered buyers and guest checkouts, then jump to the full customer directory.</p>
+                </div>
+                <a href="{{ url_for('customer.index') }}" class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                    <i class="fas fa-users mr-1"></i> View customers
+                </a>
+            </div>
+            <div class="grid grid-cols-3 gap-4 text-center mb-4">
+                <div>
+                    <div class="text-sm text-gray-500 uppercase">Total</div>
+                    <div class="text-xl font-semibold">{{ customer_stats.total }}</div>
+                    <div class="text-xs text-green-600">Registered</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500 uppercase">Active</div>
+                    <div class="text-xl font-semibold">{{ customer_stats.active }}</div>
+                    <div class="text-xs text-green-600">Engaged</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500 uppercase">Guests</div>
+                    <div class="text-xl font-semibold">{{ customer_stats.guests }}</div>
+                    <div class="text-xs text-yellow-600">Guest orders</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-2 gap-4 text-center mb-4">
+                <div>
+                    <div class="text-sm text-gray-500 uppercase">Avg Order Value</div>
+                    <div class="text-lg font-semibold">${{ "%.2f"|format(customer_insights.avg_order_value or 0) }}</div>
+                    <div class="text-xs text-gray-500">Completed orders only</div>
+                </div>
+                <div>
+                    <div class="text-sm text-gray-500 uppercase">Repeat Rate</div>
+                    <div class="text-lg font-semibold">{{ customer_insights.repeat_rate }}%</div>
+                    <div class="text-xs text-gray-500">Customers with >1 order</div>
+                </div>
+            </div>
+            <div class="text-center">
+                <div class="text-sm text-gray-500 uppercase">Lifetime revenue</div>
+                <div class="text-lg font-semibold">${{ "%.2f"|format(customer_insights.total_revenue or 0) }}</div>
+                <div class="text-xs text-gray-500">Avg per customer ${{ "%.2f"|format(customer_insights.avg_lifetime_value or 0) }}</div>
+            </div>
+            <div class="mt-4">
+                <div class="flex justify-between text-sm font-medium mb-2">
+                    <span>Top customers</span>
+                    <span class="text-gray-500">{{ top_customers|length }} tracked</span>
+                </div>
+                {% if top_customers %}
+                <ul class="divide-y divide-gray-200">
+                    {% for customer in top_customers %}
+                    <li class="py-2 flex justify-between items-center">
+                        <div>
+                            <strong>{{ customer.name }}</strong>
+                            <div class="text-xs text-gray-500">
+                                {{ customer.order_count }} order{% if customer.order_count != 1 %}s{% endif %}
+                                · Avg ${{ "%.2f"|format(customer.avg_order_value or 0) }}
+                                {% if customer.last_order_date %}
+                                · Last {{ customer.last_order_date.strftime('%b %d, %Y') }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">${{ "%.2f"|format(customer.revenue or 0) }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="text-sm text-gray-500">No customer purchases recorded yet.</p>
+                {% endif %}
+            </div>
+        </div>
+        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4 flex flex-col items-center justify-center text-center">
+            <i class="fas fa-user-friends text-3xl text-gray-400 mb-2"></i>
+            <h6 class="font-medium">Guest shoppers</h6>
+            <p class="text-sm text-gray-500 mb-3">
+                Guest orders are captured here—turn them into customers by saving their info on the customer page.
+            </p>
+            <a href="{{ url_for('customer.index') }}" class="inline-flex items-center px-3 py-1 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                Go to customer analytics
+            </a>
+        </div>
+    </div>
+
+    <!-- Orders Table -->
+    <div class="overflow-x-auto">
+        <table class="min-w-full divide-y divide-gray-200" id="ordersTable">
+            <thead class="bg-gray-50">
+                <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order #</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Total</th>
+                    <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+            </thead>
+            <tbody id="ordersTableBody" class="bg-white divide-y divide-gray-200">
+                {% include 'orders/_order_list.html' %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="infiniteScrollLoader" class="text-center py-3 hidden">
+        <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent text-blue-600"></div>
+    </div>
+
+    <!-- Pagination fallback -->
+    {% if orders.pages > 1 %}
+    <nav aria-label="Page navigation" class="mt-6">
+        <ul class="flex justify-center space-x-2">
+            {{ pagination.links|safe }}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
 {% endblock %}
 
 {% block order_scripts %}
 {{ super() }}
 <script src="{{ url_for('static', filename='js/pages/orders/index.js') }}"></script>
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Initialize tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (el) {
-            return new bootstrap.Tooltip(el);
-        });
-    });
-</script>
 {% endblock %}

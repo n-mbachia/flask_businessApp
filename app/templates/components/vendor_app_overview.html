@@ -1,0 +1,86 @@
+{% set show_stats = show_stats|default(true) %}
+{% set show_actions = show_actions|default(true) %}
+
+<section class="mb-8 rounded-2xl bg-gradient-to-r from-gray-900 via-blue-900 to-indigo-800 px-6 py-8 text-white shadow-xl">
+    <div class="grid grid-cols-1 lg:grid-cols-5 gap-6 items-center">
+        <div class="lg:col-span-3">
+            <p class="text-xs uppercase tracking-widest text-blue-200">Vendor Onboarding + Profitability Console</p>
+            <h2 class="mt-2 text-3xl font-bold leading-tight">Launch, manage, and grow your storefront from one place</h2>
+            <p class="mt-3 text-blue-100 max-w-2xl">
+                This platform gives vendors one workflow for product onboarding, promotion controls, and profitability tracking.
+                Publish catalog-ready listings, monitor margin impact, and manage flash sales without switching tools.
+            </p>
+            {% if show_actions %}
+            <div class="mt-5 flex flex-wrap gap-3">
+                <a href="{{ url_for('storefront.vendor_portal') }}" class="inline-flex items-center rounded-md bg-white px-4 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100">
+                    <i data-lucide="layout-dashboard" class="w-4 h-4 mr-2"></i> Open Vendor Portal
+                </a>
+                <a href="{{ url_for('auth.login', next=url_for('storefront.vendor_portal')) }}" class="inline-flex items-center rounded-md border border-white/70 px-4 py-2 text-sm font-semibold text-white hover:bg-white/10">
+                    <i data-lucide="log-in" class="w-4 h-4 mr-2"></i> Sign In as Vendor
+                </a>
+                <a href="{{ url_for('auth.register') }}" class="inline-flex items-center rounded-md border border-blue-200/70 px-4 py-2 text-sm font-semibold text-blue-100 hover:bg-blue-500/20">
+                    <i data-lucide="user-plus" class="w-4 h-4 mr-2"></i> Request Vendor Access
+                </a>
+            </div>
+            {% endif %}
+        </div>
+        <div class="lg:col-span-2 rounded-xl bg-white/10 backdrop-blur p-5 border border-white/20">
+            <p class="text-sm font-semibold text-blue-100">Vendor portal highlights</p>
+            <ul class="mt-3 space-y-2 text-sm text-blue-50">
+                <li class="flex items-start gap-2"><i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-green-300"></i>Guided SKU onboarding and approval status tracking</li>
+                <li class="flex items-start gap-2"><i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-green-300"></i>Promotion and flash-sale controls with promo code support</li>
+                <li class="flex items-start gap-2"><i data-lucide="check-circle" class="w-4 h-4 mt-0.5 text-green-300"></i>Inventory and margin visibility tied to every order</li>
+            </ul>
+        </div>
+    </div>
+</section>
+
+{% if show_stats %}
+<section class="mb-8 grid grid-cols-1 sm:grid-cols-3 gap-4" aria-label="Marketplace performance stats">
+    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="text-xs uppercase tracking-wide text-gray-500">Active vendors</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900">120+</p>
+        <p class="mt-1 text-sm text-gray-600">Curated and vetted in real time.</p>
+    </article>
+    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="text-xs uppercase tracking-wide text-gray-500">Orders processed</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900">150k+</p>
+        <p class="mt-1 text-sm text-gray-600">Across guest and signed-in shoppers.</p>
+    </article>
+    <article class="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <p class="text-xs uppercase tracking-wide text-gray-500">Exclusive deals unlocked</p>
+        <p class="mt-2 text-2xl font-bold text-gray-900">72%</p>
+        <p class="mt-1 text-sm text-gray-600">Members save more with targeted offers.</p>
+    </article>
+</section>
+{% endif %}
+
+<section class="mb-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-sm" aria-label="Core application features">
+    <div class="mb-5">
+        <p class="text-xs uppercase tracking-widest text-gray-500">Vendor-first capabilities</p>
+        <h3 class="mt-2 text-2xl font-bold text-gray-900">Built for onboarding, merchandising, and growth</h3>
+        <p class="mt-2 text-sm text-gray-600">The platform combines storefront operations and business intelligence in one vendor workflow.</p>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <article class="rounded-lg border border-gray-200 p-4">
+            <i data-lucide="gauge" class="w-5 h-5 text-blue-600"></i>
+            <h4 class="mt-3 font-semibold text-gray-900">Real-time insights</h4>
+            <p class="mt-1 text-sm text-gray-600">Track revenue, margins, and spending trends by product and period.</p>
+        </article>
+        <article class="rounded-lg border border-gray-200 p-4">
+            <i data-lucide="package-check" class="w-5 h-5 text-blue-600"></i>
+            <h4 class="mt-3 font-semibold text-gray-900">Structured onboarding</h4>
+            <p class="mt-1 text-sm text-gray-600">Submit products with pricing and media through guided approval workflows.</p>
+        </article>
+        <article class="rounded-lg border border-gray-200 p-4">
+            <i data-lucide="megaphone" class="w-5 h-5 text-blue-600"></i>
+            <h4 class="mt-3 font-semibold text-gray-900">Promotion controls</h4>
+            <p class="mt-1 text-sm text-gray-600">Run flash sales and promotional pricing with auditable campaign settings.</p>
+        </article>
+        <article class="rounded-lg border border-gray-200 p-4">
+            <i data-lucide="warehouse" class="w-5 h-5 text-blue-600"></i>
+            <h4 class="mt-3 font-semibold text-gray-900">Inventory visibility</h4>
+            <p class="mt-1 text-sm text-gray-600">Monitor stock, approvals, and sell-through with operational clarity.</p>
+        </article>
+    </div>
+</section>

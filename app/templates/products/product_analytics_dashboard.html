@@ -10,325 +10,240 @@
 {% endblock %}
 
 {% block content %}
-<!-- Enhanced Header -->
-<div class="analytics-header">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-2">
-                    <i class="fas fa-chart-line me-3"></i>
+<!-- Header -->
+<div class="bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-8 mb-6">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="flex flex-col md:flex-row justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center">
+                    <i class="fas fa-chart-line mr-3"></i>
                     {{ product.name }} Analytics Dashboard
                 </h1>
-                <p class="mb-0 opacity-75">
-                    Real-time performance metrics and insights
-                </p>
+                <p class="opacity-75 mt-1">Real-time performance metrics and insights</p>
             </div>
-            <div class="col-md-4 text-md-end">
-                <div class="d-flex gap-2 justify-content-md-end align-items-center">
-                    <div class="realtime-indicator">
-                        Live Data
-                    </div>
-                    <button class="btn btn-light refresh-btn" title="Refresh Data">
-                        <i class="fas fa-sync-alt"></i>
+            <div class="flex gap-2 mt-4 md:mt-0 items-center">
+                <span class="inline-flex items-center px-2 py-1 bg-green-500 text-xs font-medium rounded-md">Live Data</span>
+                <button class="inline-flex items-center p-2 bg-white text-gray-700 rounded-md hover:bg-gray-100" title="Refresh Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+                <div class="relative" x-data="{ open: false }">
+                    <button @click="open = !open" class="inline-flex items-center px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100">
+                        <i class="fas fa-calendar mr-2"></i>
+                        <span id="currentPeriod">Last 30 Days</span>
+                        <i class="fas fa-chevron-down ml-2"></i>
                     </button>
-                    <div class="dropdown period-selector">
-                        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
-                            <i class="fas fa-calendar me-2"></i>
-                            <span id="currentPeriod">Last 30 Days</span>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" data-period="7">Last 7 Days</a></li>
-                            <li><a class="dropdown-item" href="#" data-period="30">Last 30 Days</a></li>
-                            <li><a class="dropdown-item" href="#" data-period="90">Last 90 Days</a></li>
-                            <li><a class="dropdown-item" href="#" data-period="365">Last Year</a></li>
-                        </ul>
+                    <div x-show="open" @click.away="open = false" x-cloak class="absolute right-0 mt-2 w-40 bg-white border border-gray-200 rounded-md shadow-lg z-10">
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-period="7">Last 7 Days</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-period="30">Last 30 Days</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-period="90">Last 90 Days</a>
+                        <a href="#" class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100" data-period="365">Last Year</a>
                     </div>
-                    <a href="{{ url_for('products.manage_products', product_id=product.id) }}" class="btn btn-light">
-                        <i class="fas fa-arrow-left me-2"></i>Back to Product
-                    </a>
                 </div>
+                <a href="{{ url_for('products.manage_products', product_id=product.id) }}" class="inline-flex items-center px-3 py-1.5 bg-white text-gray-700 text-sm font-medium rounded-md hover:bg-gray-100">
+                    <i class="fas fa-arrow-left mr-2"></i>Back to Product
+                </a>
             </div>
         </div>
     </div>
 </div>
 
-<div class="container-fluid">
-    <!-- Enhanced Summary Metrics -->
-    <div class="row mb-4">
-        <div class="col-md-3 mb-3">
-            <div class="metrics-card">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-muted mb-0">Revenue</h6>
-                    <i class="fas fa-dollar-sign text-primary"></i>
-                </div>
-                <h3 class="mb-1" id="revenueMetric">${{ "%.2f"|format(metrics.revenue) }}</h3>
-                <div class="d-flex align-items-center">
-                    {% if metrics.revenue_growth > 0 %}
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        <span class="text-success">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
-                    {% else %}
-                        <i class="fas fa-arrow-down text-danger me-1"></i>
-                        <span class="text-danger">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
-                    {% endif %}
-                    <small class="text-muted ms-2">vs last period</small>
-                </div>
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <!-- Summary Metrics -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <h6 class="text-sm text-gray-500">Revenue</h6>
+                <i class="fas fa-dollar-sign text-blue-600"></i>
+            </div>
+            <p class="text-2xl font-bold" id="revenueMetric">${{ "%.2f"|format(metrics.revenue) }}</p>
+            <div class="flex items-center text-sm">
+                {% if metrics.revenue_growth > 0 %}
+                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                    <span class="text-green-600">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
+                {% else %}
+                    <i class="fas fa-arrow-down text-red-600 mr-1"></i>
+                    <span class="text-red-600">{{ "%.1f"|format(metrics.revenue_growth) }}%</span>
+                {% endif %}
+                <span class="text-gray-500 ml-2 text-xs">vs last period</span>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="metrics-card">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-muted mb-0">Profit</h6>
-                    <i class="fas fa-chart-pie text-success"></i>
-                </div>
-                <h3 class="mb-1" id="profitMetric">${{ "%.2f"|format(metrics.net_profit) }}</h3>
-                <div class="d-flex align-items-center">
-                    {% if metrics.profit_growth > 0 %}
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        <span class="text-success">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
-                    {% else %}
-                        <i class="fas fa-arrow-down text-danger me-1"></i>
-                        <span class="text-danger">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
-                    {% endif %}
-                    <small class="text-muted ms-2">vs last period</small>
-                </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <h6 class="text-sm text-gray-500">Profit</h6>
+                <i class="fas fa-chart-pie text-green-600"></i>
+            </div>
+            <p class="text-2xl font-bold" id="profitMetric">${{ "%.2f"|format(metrics.net_profit) }}</p>
+            <div class="flex items-center text-sm">
+                {% if metrics.profit_growth > 0 %}
+                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                    <span class="text-green-600">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
+                {% else %}
+                    <i class="fas fa-arrow-down text-red-600 mr-1"></i>
+                    <span class="text-red-600">{{ "%.1f"|format(metrics.profit_growth) }}%</span>
+                {% endif %}
+                <span class="text-gray-500 ml-2 text-xs">vs last period</span>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="metrics-card">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-muted mb-0">Margin</h6>
-                    <i class="fas fa-percentage text-info"></i>
-                </div>
-                <h3 class="mb-1" id="marginMetric">{{ "%.1f"|format(metrics.net_margin) }}%</h3>
-                <div class="d-flex align-items-center">
-                    {% if metrics.margin_growth > 0 %}
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        <span class="text-success">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
-                    {% else %}
-                        <i class="fas fa-arrow-down text-danger me-1"></i>
-                        <span class="text-danger">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
-                    {% endif %}
-                    <small class="text-muted ms-2">vs last period</small>
-                </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <h6 class="text-sm text-gray-500">Margin</h6>
+                <i class="fas fa-percentage text-indigo-600"></i>
+            </div>
+            <p class="text-2xl font-bold" id="marginMetric">{{ "%.1f"|format(metrics.net_margin) }}%</p>
+            <div class="flex items-center text-sm">
+                {% if metrics.margin_growth > 0 %}
+                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                    <span class="text-green-600">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
+                {% else %}
+                    <i class="fas fa-arrow-down text-red-600 mr-1"></i>
+                    <span class="text-red-600">{{ "%.1f"|format(metrics.margin_growth) }}pp</span>
+                {% endif %}
+                <span class="text-gray-500 ml-2 text-xs">vs last period</span>
             </div>
         </div>
-        <div class="col-md-3 mb-3">
-            <div class="metrics-card">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <h6 class="text-muted mb-0">Units Sold</h6>
-                    <i class="fas fa-box text-warning"></i>
-                </div>
-                <h3 class="mb-1" id="unitsMetric">{{ metrics.units_sold|number_format(0) }}</h3>
-                <div class="d-flex align-items-center">
-                    {% if metrics.units_growth > 0 %}
-                        <i class="fas fa-arrow-up text-success me-1"></i>
-                        <span class="text-success">{{ "%.1f"|format(metrics.units_growth) }}%</span>
-                    {% else %}
-                        <i class="fas fa-arrow-down text-danger me-1"></i>
-                        <span class="text-danger">{{ "%.1f"|format(metrics.units_growth) }}%</span>
-                    {% endif %}
-                    <small class="text-muted ms-2">vs last period</small>
-                </div>
+        <div class="bg-white shadow rounded-lg p-4">
+            <div class="flex justify-between items-start mb-2">
+                <h6 class="text-sm text-gray-500">Units Sold</h6>
+                <i class="fas fa-box text-yellow-600"></i>
+            </div>
+            <p class="text-2xl font-bold" id="unitsMetric">{{ metrics.units_sold|number_format(0) }}</p>
+            <div class="flex items-center text-sm">
+                {% if metrics.units_growth > 0 %}
+                    <i class="fas fa-arrow-up text-green-600 mr-1"></i>
+                    <span class="text-green-600">{{ "%.1f"|format(metrics.units_growth) }}%</span>
+                {% else %}
+                    <i class="fas fa-arrow-down text-red-600 mr-1"></i>
+                    <span class="text-red-600">{{ "%.1f"|format(metrics.units_growth) }}%</span>
+                {% endif %}
+                <span class="text-gray-500 ml-2 text-xs">vs last period</span>
             </div>
         </div>
     </div>
 
-    <!-- Enhanced Tab Navigation -->
-    <div class="card">
-        <div class="card-header p-0">
-            <ul class="nav nav-tabs card-header-tabs" id="analyticsTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="overview-tab" data-bs-toggle="tab" 
-                            data-bs-target="#overview" type="button" role="tab" aria-controls="overview" 
-                            aria-selected="true">
-                        <i class="fas fa-chart-line me-2"></i>Overview
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="lots-tab" data-bs-toggle="tab" 
-                            data-bs-target="#lots" type="button" role="tab" aria-controls="lots" 
-                            aria-selected="false">
-                        <i class="fas fa-boxes me-2"></i>Lot Analytics
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="inventory-tab" data-bs-toggle="tab" 
-                            data-bs-target="#inventory" type="button" role="tab" aria-controls="inventory" 
-                            aria-selected="false">
-                        <i class="fas fa-warehouse me-2"></i>Inventory
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="forecasts-tab" data-bs-toggle="tab" 
-                            data-bs-target="#forecasts" type="button" role="tab" aria-controls="forecasts" 
-                            aria-selected="false">
-                        <i class="fas fa-crystal-ball me-2"></i>Forecasts
-                    </button>
-                </li>
-            </ul>
+    <!-- Tab Navigation (Alpine) -->
+    <div x-data="{ activeTab: 'overview' }" class="bg-white shadow rounded-lg">
+        <div class="border-b border-gray-200">
+            <nav class="flex -mb-px">
+                <button @click="activeTab = 'overview'" :class="{ 'border-blue-500 text-blue-600': activeTab === 'overview', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'overview' }" class="py-3 px-6 text-sm font-medium border-b-2 focus:outline-none">
+                    <i class="fas fa-chart-line mr-2"></i>Overview
+                </button>
+                <button @click="activeTab = 'lots'" :class="{ 'border-blue-500 text-blue-600': activeTab === 'lots', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'lots' }" class="py-3 px-6 text-sm font-medium border-b-2 focus:outline-none">
+                    <i class="fas fa-boxes mr-2"></i>Lot Analytics
+                </button>
+                <button @click="activeTab = 'inventory'" :class="{ 'border-blue-500 text-blue-600': activeTab === 'inventory', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'inventory' }" class="py-3 px-6 text-sm font-medium border-b-2 focus:outline-none">
+                    <i class="fas fa-warehouse mr-2"></i>Inventory
+                </button>
+                <button @click="activeTab = 'forecasts'" :class="{ 'border-blue-500 text-blue-600': activeTab === 'forecasts', 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300': activeTab !== 'forecasts' }" class="py-3 px-6 text-sm font-medium border-b-2 focus:outline-none">
+                    <i class="fas fa-chart-bar mr-2"></i>Forecasts
+                </button>
+            </nav>
         </div>
 
-        <!-- Tab Content -->
-        <div class="card-body">
-            <div class="tab-content" id="analyticsTabContent">
-                <!-- Overview Tab -->
-                <div class="tab-pane fade show active" id="overview" role="tabpanel" aria-labelledby="overview-tab">
-                    <div class="row">
-                        <div class="col-lg-8 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Revenue & Profit Trend</h5>
-                                    <div class="btn-group btn-group-sm chart-type-switcher">
-                                        <button class="btn btn-outline-primary active" data-chart="revenueTrend" data-type="line">Line</button>
-                                        <button class="btn btn-outline-primary" data-chart="revenueTrend" data-type="bar">Bar</button>
-                                    </div>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="revenueTrend"></canvas>
-                                        <div class="loading-overlay d-none" id="revenueTrendLoading">
-                                            <div class="spinner-border text-primary" role="status">
-                                                <span class="visually-hidden">Loading...</span>
-                                            </div>
-                                        </div>
-                                    </div>
+        <div class="p-6">
+            <!-- Overview Tab -->
+            <div x-show="activeTab === 'overview'" x-cloak>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-2">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h5 class="font-medium">Revenue & Profit Trend</h5>
+                                <div class="flex gap-1 bg-gray-200 p-1 rounded-md">
+                                    <button class="px-2 py-1 text-xs font-medium rounded bg-white shadow" data-chart="revenueTrend" data-type="line">Line</button>
+                                    <button class="px-2 py-1 text-xs font-medium rounded hover:bg-white" data-chart="revenueTrend" data-type="bar">Bar</button>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-lg-4 mb-4">
-                            <div class="card h-100">
-                                <div class="card-header d-flex justify-content-between align-items-center">
-                                    <h5 class="mb-0">Cost Breakdown</h5>
-                                    <button class="btn btn-sm btn-outline-primary export-btn" onclick="window.analyticsDashboard.exportCostData()">
-                                        <i class="fas fa-download"></i>
-                                    </button>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="costBreakdown"></canvas>
-                                    </div>
+                            <div class="h-64 relative">
+                                <canvas id="revenueTrend"></canvas>
+                                <div id="revenueTrendLoading" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-75 hidden">
+                                    <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent text-blue-600"></div>
                                 </div>
                             </div>
                         </div>
                     </div>
-                    
-                    <!-- Additional Overview Charts -->
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Sales Performance</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container" style="height: 250px;">
-                                        <canvas id="salesPerformance"></canvas>
-                                    </div>
-                                </div>
+                    <div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <div class="flex justify-between items-center mb-3">
+                                <h5 class="font-medium">Cost Breakdown</h5>
+                                <button class="text-blue-600 hover:text-blue-800 text-sm" onclick="window.analyticsDashboard.exportCostData()">
+                                    <i class="fas fa-download"></i>
+                                </button>
                             </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Profit Margins</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container" style="height: 250px;">
-                                        <canvas id="profitMargins"></canvas>
-                                    </div>
-                                </div>
+                            <div class="h-64">
+                                <canvas id="costBreakdown"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Sales Performance</h5>
+                        <div class="h-64">
+                            <canvas id="salesPerformance"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Profit Margins</h5>
+                        <div class="h-64">
+                            <canvas id="profitMargins"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-                <!-- Lot Analytics Tab -->
-                <div class="tab-pane fade" id="lots" role="tabpanel" aria-labelledby="lots-tab">
-                    {% include 'components/lot_analytics_table.html' %}
-                    
-                    <div class="row mt-4">
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Lot Performance</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="lotPerformance"></canvas>
-                                    </div>
-                                </div>
+            <!-- Lot Analytics Tab -->
+            <div x-show="activeTab === 'lots'" x-cloak>
+                {% include 'components/lot_analytics_table.html' %}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Lot Performance</h5>
+                        <div class="h-64">
+                            <canvas id="lotPerformance"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Growth Metrics</h5>
+                        <div class="h-64">
+                            <canvas id="growthMetrics"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Tab -->
+            <div x-show="activeTab === 'inventory'" x-cloak>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="md:col-span-2">
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h5 class="font-medium mb-3">Inventory Levels</h5>
+                            <div class="h-64">
+                                <canvas id="inventoryLevels"></canvas>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Growth Metrics</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="growthMetrics"></canvas>
-                                    </div>
-                                </div>
+                    </div>
+                    <div>
+                        <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                            <h5 class="font-medium mb-3">Stock Status</h5>
+                            <div class="h-64">
+                                <canvas id="stockStatus"></canvas>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
 
-                <!-- Inventory Tab -->
-                <div class="tab-pane fade" id="inventory" role="tabpanel" aria-labelledby="inventory-tab">
-                    <div class="row">
-                        <div class="col-md-8 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Inventory Levels</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="inventoryLevels"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Stock Status</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="stockStatus"></canvas>
-                                    </div>
-                                </div>
-                            </div>
+            <!-- Forecasts Tab -->
+            <div x-show="activeTab === 'forecasts'" x-cloak>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Revenue Forecast</h5>
+                        <div class="h-64">
+                            <canvas id="revenueForecast"></canvas>
                         </div>
                     </div>
-                </div>
-
-                <!-- Forecasts Tab -->
-                <div class="tab-pane fade" id="forecasts" role="tabpanel" aria-labelledby="forecasts-tab">
-                    <div class="row">
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Revenue Forecast</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="revenueForecast"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5 class="mb-0">Demand Forecast</h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="chart-container">
-                                        <canvas id="demandForecast"></canvas>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="bg-gray-50 border border-gray-200 rounded-lg p-4">
+                        <h5 class="font-medium mb-3">Demand Forecast</h5>
+                        <div class="h-64">
+                            <canvas id="demandForecast"></canvas>
                         </div>
                     </div>
                 </div>
@@ -343,30 +258,22 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="{{ url_for('static', filename='js/product-analytics.js') }}"></script>
 <script>
-// Initialize dashboard when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     window.analyticsDashboard = new ProductAnalyticsDashboard({{ product.id }});
     window.analyticsDashboard.init();
-});
 
-// Setup chart type switchers
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll('.chart-type-switcher .btn').forEach(btn => {
+    document.querySelectorAll('[data-chart]').forEach(btn => {
         btn.addEventListener('click', function() {
             const chartId = this.dataset.chart;
             const chartType = this.dataset.type;
             if (window.analyticsDashboard) {
                 window.analyticsDashboard.changeChartType(chartId, chartType);
             }
+            // active button styling
+            this.closest('.bg-gray-200').querySelectorAll('button').forEach(b => b.classList.remove('bg-white', 'shadow'));
+            this.classList.add('bg-white', 'shadow');
         });
     });
-});
-
-// Cleanup on page unload
-window.addEventListener('beforeunload', function() {
-    if (window.analyticsDashboard) {
-        window.analyticsDashboard.destroy();
-    }
 });
 </script>
 {% endblock %}

@@ -5,10 +5,7 @@
 class ProductsManager {
     constructor() {
         this.form = document.getElementById('productForm');
-        this.editForm = document.getElementById('editForm');
-        this.modal = document.getElementById('editModal');
         this.csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-
         this.init();
     }
 
@@ -32,13 +29,6 @@ class ProductsManager {
             });
         }
 
-        // Edit form submission
-        if (this.editForm) {
-            this.editForm.addEventListener('submit', (e) => {
-                this.handleEditFormSubmit(e);
-            });
-        }
-
         // Delete confirmations
         document.querySelectorAll('form[action*="delete"]').forEach(form => {
             form.addEventListener('submit', (e) => {
@@ -57,16 +47,10 @@ class ProductsManager {
         const marginDisplay = document.getElementById('marginDisplay');
 
         if (cogsInput && priceInput && marginDisplay) {
-            cogsInput.addEventListener('input', () => {
-                this.updateMarginDisplay(cogsInput, priceInput, marginDisplay);
-            });
-
-            priceInput.addEventListener('input', () => {
-                this.updateMarginDisplay(cogsInput, priceInput, marginDisplay);
-            });
-
-            // Initial calculation
-            this.updateMarginDisplay(cogsInput, priceInput, marginDisplay);
+            const update = () => this.updateMarginDisplay(cogsInput, priceInput, marginDisplay);
+            cogsInput.addEventListener('input', update);
+            priceInput.addEventListener('input', update);
+            update();
         }
 
         // Modal form margin calculation
@@ -75,16 +59,10 @@ class ProductsManager {
         const modalMargin = document.getElementById('modal_margin_display');
 
         if (modalCogs && modalPrice && modalMargin) {
-            modalCogs.addEventListener('input', () => {
-                this.updateMarginDisplay(modalCogs, modalPrice, modalMargin);
-            });
-
-            modalPrice.addEventListener('input', () => {
-                this.updateMarginDisplay(modalCogs, modalPrice, modalMargin);
-            });
-
-            // Initial calculation
-            this.updateMarginDisplay(modalCogs, modalPrice, modalMargin);
+            const update = () => this.updateMarginDisplay(modalCogs, modalPrice, modalMargin);
+            modalCogs.addEventListener('input', update);
+            modalPrice.addEventListener('input', update);
+            update();
         }
     }
 
@@ -107,7 +85,7 @@ class ProductsManager {
 
         // Show loading state
         submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Saving...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
 
         // Reset form after successful submission
         setTimeout(() => {
@@ -120,19 +98,8 @@ class ProductsManager {
                 );
             }
             submitBtn.disabled = false;
-            submitBtn.value = 'Save Product';
+            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Product';
         }, 100);
-    }
-
-    /**
-     * Handle edit form submission
-     */
-    handleEditFormSubmit(e) {
-        const submitBtn = this.editForm.querySelector('button[type="submit"]');
-
-        // Show loading state
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Updating...';
     }
 
     /**
@@ -149,11 +116,8 @@ class ProductsManager {
             // Fetch product data
             const product = await this.fetchProductData(productId);
 
-            // Populate modal form
-            this.populateEditForm(product);
-
-            // Show modal
-            this.showEditModal();
+            // Dispatch event to open Alpine modal with product data
+            window.dispatchEvent(new CustomEvent('open-edit-modal', { detail: product }));
 
         } catch (error) {
             console.error('Error fetching product data:', error);
@@ -164,7 +128,7 @@ class ProductsManager {
             this.showNotification(errorMessage, 'error');
         } finally {
             button.disabled = false;
-            button.innerHTML = '<i class="fas fa-edit"></i> Edit';
+            button.innerHTML = '<i class="fas fa-edit"></i>';
         }
     }
 
@@ -183,43 +147,6 @@ class ProductsManager {
         }
 
         return response.json();
-    }
-
-    /**
-     * Populate edit form with product data
-     */
-    populateEditForm(product) {
-        document.getElementById('modal_product_id').value = product.id;
-        document.getElementById('modal_name').value = product.name || '';
-        document.getElementById('modal_description').value = product.description || '';
-        document.getElementById('modal_sku').value = product.sku || '';
-        document.getElementById('modal_barcode').value = product.barcode || '';
-        document.getElementById('modal_cogs_per_unit').value = product.cogs_per_unit;
-        document.getElementById('modal_selling_price_per_unit').value = product.selling_price_per_unit;
-        document.getElementById('modal_reorder_level').value = product.reorder_level || 10;
-
-        // Set category select value
-        const categorySelect = document.getElementById('modal_category');
-        if (categorySelect && product.category) {
-            categorySelect.value = product.category;
-        }
-
-        // Update margin display
-        this.updateMarginDisplay(
-            { value: product.cogs_per_unit },
-            { value: product.selling_price_per_unit },
-            document.getElementById('modal_margin_display')
-        );
-    }
-
-    /**
-     * Show edit modal
-     */
-    showEditModal() {
-        if (this.modal) {
-            const modal = new bootstrap.Modal(this.modal);
-            modal.show();
-        }
     }
 
     /**
@@ -258,42 +185,51 @@ class ProductsManager {
             margin = ((price - cogs) / price) * 100;
         }
 
-        const marginText = `${margin.toFixed(2)}%`;
-        displayElement.textContent = marginText;
+        displayElement.textContent = margin.toFixed(2) + '%';
 
-        // Update styling based on margin value
-        displayElement.className = 'badge bg-primary fs-6'; // Keep bootstrap style
+        // Update styling based on margin value (Tailwind classes)
+        displayElement.className = 'inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium';
         if (margin < 0) {
-            displayElement.classList.add('bg-danger');
+            displayElement.classList.add('bg-red-100', 'text-red-800');
         } else if (margin > 50) {
-            displayElement.classList.add('bg-success');
+            displayElement.classList.add('bg-green-100', 'text-green-800');
         } else {
-            displayElement.classList.add('bg-primary');
+            displayElement.classList.add('bg-blue-100', 'text-blue-800');
         }
 
         return margin;
     }
 
     /**
-     * Show notification
+     * Show toast notification (Tailwind)
      */
     showNotification(message, type = 'info') {
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
-        notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-        notification.innerHTML = `
-            ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
+        // Reuse the toast function from earlier
+        let container = document.getElementById('toastContainer');
+        if (!container) {
+            container = document.createElement('div');
+            container.id = 'toastContainer';
+            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
+            document.body.appendChild(container);
+        }
+        const toastId = 'toast-' + Date.now();
+        const typeClasses = {
+            success: 'bg-green-500',
+            error: 'bg-red-500',
+            warning: 'bg-yellow-500',
+            info: 'bg-blue-500'
+        }[type] || 'bg-gray-500';
 
-        document.body.appendChild(notification);
+        const toast = document.createElement('div');
+        toast.id = toastId;
+        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${typeClasses}`;
+        toast.textContent = message;
+        container.appendChild(toast);
 
-        // Auto-remove after 5 seconds
         setTimeout(() => {
-            if (notification.parentNode) {
-                notification.remove();
-            }
-        }, 5000);
+            toast.classList.add('opacity-0', 'translate-y-2');
+            setTimeout(() => toast.remove(), 300);
+        }, 3000);
     }
 
     /**
@@ -307,12 +243,8 @@ class ProductsManager {
         let isValid = true;
 
         // Reset previous errors
-        form.querySelectorAll('.is-invalid').forEach(element => {
-            element.classList.remove('is-invalid');
-        });
-        form.querySelectorAll('.invalid-feedback').forEach(element => {
-            element.remove();
-        });
+        form.querySelectorAll('.border-red-500').forEach(el => el.classList.remove('border-red-500'));
+        form.querySelectorAll('.text-red-600').forEach(el => el.remove());
 
         // Validate name
         if (!nameInput.value.trim()) {
@@ -336,15 +268,13 @@ class ProductsManager {
     }
 
     /**
-     * Show field error
+     * Show field error (Tailwind styling)
      */
     showFieldError(field, message) {
-        field.classList.add('is-invalid');
-
-        const errorDiv = document.createElement('div');
-        errorDiv.className = 'invalid-feedback';
+        field.classList.add('border-red-500');
+        const errorDiv = document.createElement('p');
+        errorDiv.className = 'mt-1 text-sm text-red-600';
         errorDiv.textContent = message;
-
         field.parentNode.appendChild(errorDiv);
     }
 
@@ -353,12 +283,8 @@ class ProductsManager {
      */
     resetForm(form) {
         form.reset();
-        form.querySelectorAll('.is-invalid').forEach(element => {
-            element.classList.remove('is-invalid');
-        });
-        form.querySelectorAll('.invalid-feedback').forEach(element => {
-            element.remove();
-        });
+        form.querySelectorAll('.border-red-500').forEach(el => el.classList.remove('border-red-500'));
+        form.querySelectorAll('.text-red-600').forEach(el => el.remove());
     }
 
     /**
@@ -397,13 +323,13 @@ class ProductsManager {
     }
 
     /**
-     * Show loading state
+     * Show loading state (overlay)
      */
     showLoadingState() {
         const overlay = document.createElement('div');
-        overlay.className = 'loading-overlay';
-        overlay.innerHTML = '<div class="loading-spinner"></div>';
+        overlay.className = 'fixed inset-0 bg-gray-500 bg-opacity-75 flex items-center justify-center z-50';
         overlay.id = 'loadingOverlay';
+        overlay.innerHTML = '<div class="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent text-blue-600"></div>';
         document.body.appendChild(overlay);
     }
 
@@ -412,21 +338,16 @@ class ProductsManager {
      */
     hideLoadingState() {
         const overlay = document.getElementById('loadingOverlay');
-        if (overlay) {
-            overlay.remove();
-        }
+        if (overlay) overlay.remove();
     }
 
     /**
      * Destroy the manager
      */
     destroy() {
-        // Clean up event listeners
+        // Clean up event listeners (optional)
         if (this.form) {
             this.form.removeEventListener('submit', this.handleFormSubmit);
-        }
-        if (this.editForm) {
-            this.editForm.removeEventListener('submit', this.handleEditFormSubmit);
         }
     }
 }

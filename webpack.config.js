@@ -4,10 +4,17 @@ const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
+const cssLoaders = [
+  isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
+  'css-loader',
+  'postcss-loader',
+  'sass-loader'
+];
+
 module.exports = {
   mode: isProduction ? 'production' : 'development',
   devtool: isProduction ? 'source-map' : 'eval-source-map',
-  
+
   entry: {
     app: './app/static/js/app.js',
     dashboard: './app/static/js/pages/dashboard.js',
@@ -26,20 +33,26 @@ module.exports = {
       {
         test: /\.js$/,
         exclude: /node_modules/,
+        parser: {
+          javascript: {
+            sourceType: 'module'
+          }
+        },
+        type: 'javascript/esm',
         use: {
           loader: 'babel-loader',
           options: {
-            presets: ['@babel/preset-env']
+            presets: ['@babel/preset-env'],
+            sourceType: 'module',
+            parserOpts: {
+              sourceType: 'module'
+            }
           }
         }
       },
       {
         test: /\.(sa|sc|c)ss$/,
-        use: [
-          isProduction ? MiniCssExtractPlugin.loader : 'style-loader',
-          'css-loader',
-          'sass-loader'
-        ]
+        use: cssLoaders
       },
       {
         test: /\.(png|jpe?g|gif|svg|woff2?|eot|ttf|otf)$/,
@@ -86,10 +99,10 @@ module.exports = {
         vendor: {
           test: /[\\/]node_modules[\\/]/,
           name: 'vendors',
-          chunks: 'all',
-        },
-      },
-    },
+          chunks: 'all'
+        }
+      }
+    }
   },
 
   performance: {

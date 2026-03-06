@@ -1,13 +1,16 @@
 # app/routes/auth.py
 
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, jsonify, session
 from flask_login import login_user, logout_user, login_required, current_user
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 from sqlalchemy import or_
 from app import db
 from datetime import datetime
 from app.models import User
-from app.forms.user_forms import LoginForm, RegisterForm, SettingsForm, ForgotPasswordForm, ResetPasswordForm
+from app.forms.user_forms import (
+    LoginForm, RegisterForm, UpdateAccountForm,
+    SettingsForm, ForgotPasswordForm, ResetPasswordForm
+)
 from app.utils.decorators import handle_exceptions, rate_limit
 from app.utils.email import send_password_reset_email, send_confirmation_email
 from app.validators import (
@@ -21,6 +24,35 @@ import logging
 logger = logging.getLogger(__name__)
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def _generate_password_reset_token(email: str) -> str:
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    salt = current_app.config.get('PASSWORD_RESET_SALT', 'password-reset-salt')
+    return serializer.dumps(email, salt=salt)
+
+
+def _verify_password_reset_token(token: str) -> str | None:
+    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
+    salt = current_app.config.get('PASSWORD_RESET_SALT', 'password-reset-salt')
+    max_age = current_app.config.get('PASSWORD_RESET_EXPIRATION', 3600)
+    return serializer.loads(token, salt=salt, max_age=max_age)
+
+
+def _can_request_password_reset() -> bool:
+    last_request = session.get('last_password_reset_request')
+    if not last_request:
+        return True
+    try:
+        previous = datetime.fromisoformat(last_request)
+    except ValueError:
+        return True
+    cooldown = current_app.config.get('PASSWORD_RESET_COOLDOWN', 60)
+    return (datetime.utcnow() - previous).total_seconds() >= cooldown
+
+
+def _record_password_reset_request():
+    session['last_password_reset_request'] = datetime.utcnow().isoformat()
 
 @auth_bp.route('/register', methods=['GET', 'POST'])
 @handle_exceptions
@@ -265,68 +297,35 @@ def logout():
 @handle_exceptions
 def profile():
     """
-    Display and update user profile.
-
-    :param: GET/POST
-    :return: rendered profile.html template
+    Unified profile and settings page.
     """
-    if request.method == 'POST':
-        # Handle profile updates
-        current_user.username = request.form.get('username', current_user.username)
-        current_user.email = request.form.get('email', current_user.email)
-        
-        # Handle password change if provided
-        new_password = request.form.get('new_password')
-        if new_password:
-            current_user.set_password(new_password)
-        
-        db.session.commit()
-        flash('Profile updated successfully!', 'success')
-        return redirect(url_for('auth.profile'))
-    
-    return render_template('auth/profile.html')
+    profile_form = UpdateAccountForm(current_user.username, current_user.email)
+    settings_form = SettingsForm()
 
-@auth_bp.route('/settings', methods=['GET', 'POST'])
-@login_required
-@handle_exceptions
-def settings():
-    """
-    Display and update user settings.
-
-    :param: GET/POST
-    :return: rendered settings.html template
-    """
-    form = SettingsForm()
-    
     if request.method == 'GET':
-        # Set form defaults from user settings
-        form.email_notifications.data = getattr(current_user, 'email_notifications', True)
-        form.low_stock_alerts.data = getattr(current_user, 'low_stock_alerts', True)
-        form.items_per_page.data = getattr(current_user, 'items_per_page', 25)
-        form.theme.data = getattr(current_user, 'theme', 'system')
-        form.threshold.data = getattr(current_user, 'threshold', 10)
-        form.currency.data = getattr(current_user, 'currency', 'USD')
-    
-    if form.validate_on_submit():
+        profile_form.username.data = current_user.username
+        profile_form.email.data = current_user.email
+        settings_form.process(obj=current_user)
+
+    # Only process profile form on POST to this route
+    if profile_form.validate_on_submit():
         try:
-            # Update user settings from form data
-            current_user.email_notifications = form.email_notifications.data
-            current_user.low_stock_alerts = form.low_stock_alerts.data
-            current_user.items_per_page = form.items_per_page.data
-            current_user.theme = form.theme.data
-            current_user.threshold = form.threshold.data
-            current_user.currency = form.currency.data
-            
+            current_user.username = sanitize_input(profile_form.username.data, 'html')
+            current_user.email = sanitize_input(profile_form.email.data, 'html')
+            if profile_form.new_password.data:
+                current_user.set_password(profile_form.new_password.data)
             db.session.commit()
-            flash('Settings updated successfully!', 'success')
-            return redirect(url_for('auth.settings'))
-            
+            flash('Profile updated successfully!', 'success')
+            return redirect(url_for('auth.profile'))
         except Exception as e:
             db.session.rollback()
-            logger.error(f"Error updating settings: {str(e)}", exc_info=True)
-            flash('An error occurred while updating your settings. Please try again.', 'danger')
-    
-    return render_template('auth/settings.html', form=form, current_theme=getattr(current_user, 'theme', 'system'))
+            logger.error(f"Error updating profile: {str(e)}", exc_info=True)
+            flash('An error occurred while updating your profile. Please try again.', 'danger')
+
+    return render_template('auth/profile.html',
+                           profile_form=profile_form,
+                           settings_form=settings_form,
+                           current_theme=settings_form.theme.data or current_user.theme)
 
 @auth_bp.route('/unconfirmed')
 def unconfirmed():
@@ -386,20 +385,26 @@ def forgot_password():
         
     form = ForgotPasswordForm()
     if form.validate_on_submit():
-        user = User.query.filter_by(email=form.email.data).first()
+        if not _can_request_password_reset():
+            flash('Please wait a bit before requesting another reset link.', 'warning')
+            return redirect(url_for('auth.forgot_password'))
+
+        email = sanitize_input(form.email.data, 'email')
+        user = User.query.filter_by(email=email).first()
         if user:
-            # Generate token
-            serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
-            token = serializer.dumps(user.email, salt='password-reset-salt')
-            
-            # Send email
+            token = _generate_password_reset_token(user.email)
             reset_url = url_for('auth.reset_password', token=token, _external=True)
             send_password_reset_email(user.email, reset_url)
-            
-        # Always show success message to prevent email enumeration
+            SecurityUtils.log_security_event('password_reset_requested', {
+                'user_id': user.id,
+                'email': user.email,
+                'ip': request.remote_addr
+            }, 'info')
+
+        _record_password_reset_request()
         flash('If an account exists with this email, you will receive a password reset link.', 'info')
         return redirect(url_for('auth.login'))
-        
+
     return render_template('auth/forgot_password.html', form=form)
 
 
@@ -415,14 +420,9 @@ def reset_password(token):
         return redirect(url_for('main.index'))
         
     # Verify token
-    serializer = URLSafeTimedSerializer(current_app.config['SECRET_KEY'])
     try:
-        email = serializer.loads(
-            token,
-            salt='password-reset-salt',
-            max_age=3600  # 1 hour expiration
-        )
-    except (SignatureExpired, BadSignature):
+        email = _verify_password_reset_token(token)
+    except (SignatureExpired, BadSignature, ValueError):
         flash('The password reset link is invalid or has expired.', 'danger')
         return redirect(url_for('auth.forgot_password'))
     

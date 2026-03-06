@@ -1,83 +1,89 @@
 {% extends "_base.html" %}
-
 {% block title %}Settings - Profitability App{% endblock %}
 
 {% block content %}
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Account Settings</h5>
-                        <a href="{{ url_for('main.dashboard') }}" class="btn btn-sm btn-outline-light">
-                            <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
-                        </a>
+<div class="py-10">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div class="bg-white shadow overflow-hidden sm:rounded-lg">
+            <div class="px-4 py-5 sm:px-6 bg-blue-600 text-white flex justify-between items-center">
+                <h3 class="text-lg leading-6 font-medium">Account Settings</h3>
+                <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center px-3 py-1 border border-transparent text-sm font-medium rounded-md text-blue-600 bg-white hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="arrow-left" class="w-4 h-4 mr-1"></i> Back to Dashboard
+                </a>
+            </div>
+            <div class="border-t border-gray-200">
+                <form method="POST" action="{{ url_for('auth.settings') }}" class="px-4 py-5 sm:p-6 space-y-6">
+                    {{ form.hidden_tag() }}
+
+                    <!-- Notification Preferences -->
+                    <fieldset>
+                        <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Notification Preferences</legend>
+                        <div class="space-y-4">
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    {{ form.email_notifications(class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded") }}
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    {{ form.email_notifications.label(class="font-medium text-gray-700") }}
+                                    <p class="text-gray-500">Receive email notifications for important updates</p>
+                                </div>
+                            </div>
+                            <div class="flex items-start">
+                                <div class="flex items-center h-5">
+                                    {{ form.low_stock_alerts(class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded") }}
+                                </div>
+                                <div class="ml-3 text-sm">
+                                    {{ form.low_stock_alerts.label(class="font-medium text-gray-700") }}
+                                    <p class="text-gray-500">Get notified when stock is running low</p>
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Display Settings -->
+                    <fieldset>
+                        <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Display Settings</legend>
+                        <div class="grid grid-cols-1 gap-y-4 gap-x-4 sm:grid-cols-2">
+                            <div>
+                                <label for="items_per_page" class="block text-sm font-medium text-gray-700">{{ form.items_per_page.label.text }}</label>
+                                {{ form.items_per_page(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                            </div>
+                            <div>
+                                <label for="theme" class="block text-sm font-medium text-gray-700">{{ form.theme.label.text }}</label>
+                                {{ form.theme(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <!-- Business Settings -->
+                    <fieldset>
+                        <legend class="text-base font-medium text-gray-900 border-b border-gray-200 pb-2 mb-4">Business Settings</legend>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="threshold" class="block text-sm font-medium text-gray-700">{{ form.threshold.label.text }}</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    {{ form.threshold(class="flex-1 block w-full px-3 py-2 border border-gray-300 rounded-l-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                                    <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">items</span>
+                                </div>
+                                <p class="mt-1 text-sm text-gray-500">Get alerts when stock falls below this number</p>
+                            </div>
+                            <div>
+                                <label for="currency" class="block text-sm font-medium text-gray-700">{{ form.currency.label.text }}</label>
+                                {{ form.currency(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm rounded-md") }}
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div class="flex justify-end">
+                        {{ form.submit(class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500") }}
                     </div>
-                </div>
-                <div class="card-body">
-                    <form method="POST" action="{{ url_for('auth.settings') }}">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="mb-4">
-                            <h6 class="border-bottom pb-2 mb-3">Notification Preferences</h6>
-                            <div class="form-check form-switch mb-3">
-                                {{ form.email_notifications(class="form-check-input") }}
-                                {{ form.email_notifications.label(class="form-check-label") }}
-                                <div class="form-text">Receive email notifications for important updates</div>
-                            </div>
-                            
-                            <div class="form-check form-switch mb-3">
-                                {{ form.low_stock_alerts(class="form-check-input") }}
-                                {{ form.low_stock_alerts.label(class="form-check-label") }}
-                                <div class="form-text">Get notified when stock is running low</div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <h6 class="border-bottom pb-2 mb-3">Display Settings</h6>
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    {{ form.items_per_page.label(class="form-label") }}
-                                    {{ form.items_per_page(class="form-select") }}
-                                </div>
-                                <div class="col-md-6 mb-3">
-                                    {{ form.theme.label(class="form-label") }}
-                                    {{ form.theme(class="form-select") }}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="mb-4">
-                            <h6 class="border-bottom pb-2 mb-3">Business Settings</h6>
-                            <div class="mb-3">
-                                {{ form.threshold.label(class="form-label") }}
-                                <div class="input-group">
-                                    {{ form.threshold(class="form-control") }}
-                                    <span class="input-group-text">items</span>
-                                </div>
-                                <div class="form-text">Get alerts when stock falls below this number</div>
-                            </div>
-                            
-                            <div class="mb-3">
-                                {{ form.currency.label(class="form-label") }}
-                                {{ form.currency(class="form-select") }}
-                            </div>
-                        </div>
-                        
-                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
-                            {{ form.submit(class="btn btn-primary") }}
-                        </div>
-                    </form>
-                </div>
-                <div class="card-footer text-muted small">
-                    <div class="d-flex justify-content-between">
-                        <span>Last updated: {{ current_user.updated_at.strftime('%B %d, %Y %H:%M') if current_user.updated_at else 'Never' }}</span>
-                        <a href="{{ url_for('auth.profile') }}" class="text-decoration-none">
-                            <i class="bi bi-person me-1"></i>View Profile
-                        </a>
-                    </div>
-                </div>
+                </form>
+            </div>
+            <div class="border-t border-gray-200 px-4 py-4 sm:px-6 bg-gray-50 text-sm text-gray-500 flex justify-between">
+                <span>Last updated: {{ current_user.updated_at.strftime('%B %d, %Y %H:%M') if current_user.updated_at else 'Never' }}</span>
+                <a href="{{ url_for('auth.profile') }}" class="text-blue-600 hover:text-blue-500">
+                    <i data-lucide="user" class="w-4 h-4 mr-1"></i>View Profile
+                </a>
             </div>
         </div>
     </div>
@@ -87,7 +93,6 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Theme switcher
     const themeSelect = document.getElementById('theme');
     if (themeSelect) {
         // Apply current theme on load
@@ -99,7 +104,6 @@ document.addEventListener('DOMContentLoaded', function() {
             document.documentElement.setAttribute('data-bs-theme', currentTheme);
         }
         
-        // Handle theme change
         themeSelect.addEventListener('change', function() {
             const theme = this.value;
             if (theme === 'system') {

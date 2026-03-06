@@ -6,6 +6,7 @@
 // Import HTTP utilities
 import http from './utils/http.js';
 import { local as storage } from './utils/storage.js';
+import '../css/app.css';
 
 // Add CSRF token interceptor
 http.addRequestInterceptor(async (config) => {
@@ -129,8 +130,6 @@ document.addEventListener('DOMContentLoaded', () => {
  * Initialize all app components
  */
 function initializeComponents() {
-  initTooltips();
-  initModals();
   initDropdowns();
   initNavigation();
   initForms();
@@ -148,10 +147,7 @@ function initNavigation() {
     link.addEventListener('click', () => {
       const navbarCollapse = document.querySelector('.navbar-collapse');
       if (navbarCollapse?.classList.contains('show')) {
-        const bsCollapse = bootstrap.Collapse.getInstance(navbarCollapse);
-        if (bsCollapse) {
-          bsCollapse.hide();
-        }
+        navbarCollapse.classList.remove('show');
       }
     });
   });
@@ -222,51 +218,6 @@ function updateActiveNavItems() {
         }
       }
     }
-  });
-}
-
-/**
- * Initialize all tooltips on the page
- */
-function initTooltips() {
-  const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-  tooltipTriggerList.map(function (tooltipTriggerEl) {
-    return new bootstrap.Tooltip(tooltipTriggerEl, {
-      trigger: 'hover focus',
-      delay: { show: 300, hide: 100 },
-      placement: 'top'
-    });
-  });
-}
-
-/**
- * Initialize modal dialogs
- */
-function initModals() {
-  const modals = document.querySelectorAll('.modal');
-  modals.forEach(modal => {
-    modal.addEventListener('hidden.bs.modal', function () {
-      // Clear form when modal is hidden
-      const form = this.querySelector('form');
-      if (form) {
-        form.reset();
-        // Clear any validation errors
-        form.querySelectorAll('.is-invalid').forEach(el => {
-          el.classList.remove('is-invalid');
-        });
-        form.querySelectorAll('.invalid-feedback').forEach(el => {
-          el.remove();
-        });
-      }
-    });
-    
-    // Focus management
-    modal.addEventListener('shown.bs.modal', function () {
-      const firstInput = this.querySelector('input:not([type="hidden"]), textarea, select');
-      if (firstInput) {
-        firstInput.focus();
-      }
-    });
   });
 }
 
@@ -426,13 +377,6 @@ function setupGlobalListeners() {
       }
     }
     
-    // Escape to close modals
-    if (e.key === 'Escape') {
-      const openModal = document.querySelector('.modal.show');
-      if (openModal) {
-        bootstrap.Modal.getInstance(openModal)?.hide();
-      }
-    }
   });
   
   // Handle online/offline status

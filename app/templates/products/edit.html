@@ -2,150 +2,131 @@
 
 {% block title %}Edit Product - {{ product.name }}{% endblock %}
 
-{% block head %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/products.css') }}">
-{% endblock %}
-
 {% block content %}
-<div class="container-fluid">
-    <div class="row justify-content-center">
-        <div class="col-lg-8 col-md-10">
-            <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
-                    <h3 class="card-title mb-0">
-                        <i class="fas fa-edit me-2"></i>Edit Product: {{ product.name }}
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex justify-center">
+        <div class="w-full max-w-4xl">
+            <div class="bg-white shadow rounded-lg overflow-hidden">
+                <div class="bg-blue-600 px-4 py-3">
+                    <h3 class="text-lg font-semibold text-white flex items-center">
+                        <i class="fas fa-edit mr-2"></i>Edit Product: {{ product.name }}
                     </h3>
                 </div>
-                <div class="card-body">
+                <div class="p-6">
                     <form method="POST" action="{{ url_for('products.manage_products') }}">
                         {{ form.hidden_tag() }}
                         <input type="hidden" name="product_id" value="{{ product.id }}">
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.name.label(class="form-label fw-semibold") }}
-                                    {{ form.name(class="form-control", value=product.name) }}
-                                    {% for error in form.name.errors %}
-                                        <div class="text-danger small mt-1">{{ error }}</div>
-                                    {% endfor %}
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label for="name" class="block text-sm font-medium text-gray-700 mb-1">{{ form.name.label.text }}</label>
+                                <input type="text" name="name" id="name" value="{{ product.name }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                {% for error in form.name.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            <div>
+                                <label for="category" class="block text-sm font-medium text-gray-700 mb-1">{{ form.category.label.text }}</label>
+                                {% if product.category not in dict(form.category.choices) %}
+                                    <select name="category" id="category" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm" value="{{ product.category }}">
+                                        <!-- options -->
+                                    </select>
+                                    <p class="mt-1 text-xs text-gray-500">Current category: {{ product.category }}</p>
+                                {% else %}
+                                    {{ form.category(class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm") }}
+                                {% endif %}
+                                {% for error in form.category.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label for="cogs_per_unit" class="block text-sm font-medium text-gray-700 mb-1">{{ form.cogs_per_unit.label.text }}</label>
+                                <div class="flex rounded-md shadow-sm">
+                                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">$</span>
+                                    <input type="number" step="0.01" name="cogs_per_unit" id="cogs_per_unit" value="{{ product.cogs_per_unit }}" class="flex-1 block w-full rounded-none rounded-r-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                {% for error in form.cogs_per_unit.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                            <div>
+                                <label for="selling_price_per_unit" class="block text-sm font-medium text-gray-700 mb-1">{{ form.selling_price_per_unit.label.text }}</label>
+                                <div class="flex rounded-md shadow-sm">
+                                    <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">$</span>
+                                    <input type="number" step="0.01" name="selling_price_per_unit" id="selling_price_per_unit" value="{{ product.selling_price_per_unit }}" class="flex-1 block w-full rounded-none rounded-r-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                </div>
+                                {% for error in form.selling_price_per_unit.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Current Stock Level</label>
+                                <div class="flex rounded-md shadow-sm">
+                                    <input type="number" class="flex-1 block w-full rounded-l-md border-gray-300 bg-gray-100 px-3 py-2 sm:text-sm" value="{{ product.current_stock or 0 }}" readonly>
+                                    <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">units</span>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.category.label(class="form-label fw-semibold") }}
-                                    {% if product.category not in dict(form.category.choices) %}
-                                        {{ form.category(class="form-select", value=product.category) }}
-                                        <div class="form-text">Current category: {{ product.category }}</div>
-                                    {% else %}
-                                        {{ form.category(class="form-select") }}
-                                    {% endif %}
-                                    {% for error in form.category.errors %}
-                                        <div class="text-danger small mt-1">{{ error }}</div>
-                                    {% endfor %}
+                            <div>
+                                <label for="reorder_level" class="block text-sm font-medium text-gray-700 mb-1">{{ form.reorder_level.label.text }}</label>
+                                <input type="number" name="reorder_level" id="reorder_level" value="{{ product.reorder_level }}" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                                {% for error in form.reorder_level.errors %}
+                                    <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <!-- Margin Information -->
+                        <div class="mt-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Margin Information</label>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                <div class="border border-gray-200 rounded-md p-2 bg-gray-50">
+                                    <small class="text-gray-500 block">Current Margin</small>
+                                    <span class="font-semibold" id="currentMargin">
+                                        {{ "%.2f"|format((product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 if product.selling_price_per_unit > 0 else 0) }}%
+                                    </span>
+                                </div>
+                                <div class="border border-gray-200 rounded-md p-2 bg-gray-50">
+                                    <small class="text-gray-500 block">Margin Threshold</small>
+                                    <span class="font-semibold" id="marginThreshold">
+                                        {{ "%.2f"|format(product.effective_margin_threshold or 0) }}%
+                                    </span>
+                                </div>
+                                <div class="border border-gray-200 rounded-md p-2 bg-gray-50">
+                                    <small class="text-gray-500 block">Status</small>
+                                    <span class="font-semibold {{ 'text-green-600' if (product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 >= (product.effective_margin_threshold or 0) else 'text-red-600' }}" id="marginStatus">
+                                        {{ 'Above Threshold' if (product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 >= (product.effective_margin_threshold or 0) else 'Below Threshold' }}
+                                    </span>
                                 </div>
                             </div>
                         </div>
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.cogs_per_unit.label(class="form-label fw-semibold") }}
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        {{ form.cogs_per_unit(class="form-control", value=product.cogs_per_unit, step="0.01") }}
-                                    </div>
-                                    {% for error in form.cogs_per_unit.errors %}
-                                        <div class="text-danger small mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.selling_price_per_unit.label(class="form-label fw-semibold") }}
-                                    <div class="input-group">
-                                        <span class="input-group-text">$</span>
-                                        {{ form.selling_price_per_unit(class="form-control", value=product.selling_price_per_unit, step="0.01") }}
-                                    </div>
-                                    {% for error in form.selling_price_per_unit.errors %}
-                                        <div class="text-danger small mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-                        </div>
+                        <hr class="my-6 border-gray-200">
 
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Current Stock Level</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control" value="{{ product.current_stock or 0 }}" readonly>
-                                        <span class="input-group-text">units</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    {{ form.reorder_level.label(class="form-label fw-semibold") }}
-                                    {{ form.reorder_level(class="form-control", value=product.reorder_level, step="1") }}
-                                    {% for error in form.reorder_level.errors %}
-                                        <div class="text-danger small mt-1">{{ error }}</div>
-                                    {% endfor %}
-                                </div>
-                            </div>
-
-                        <div class="row">
-                            <div class="col-12">
-                                <div class="mb-3">
-                                    <label class="form-label fw-semibold">Margin Information</label>
-                                    <div class="row">
-                                        <div class="col-md-4">
-                                            <div class="border rounded p-2 bg-light">
-                                                <small class="text-muted d-block">Current Margin</small>
-                                                <span class="fw-semibold" id="currentMargin">
-                                                    {{ "%.2f"|format((product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 if product.selling_price_per_unit > 0 else 0) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="border rounded p-2 bg-light">
-                                                <small class="text-muted d-block">Margin Threshold</small>
-                                                <span class="fw-semibold" id="marginThreshold">
-                                                    {{ "%.2f"|format(product.effective_margin_threshold or 0) }}%
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-4">
-                                            <div class="border rounded p-2 bg-light">
-                                                <small class="text-muted d-block">Status</small>
-                                                <span class="fw-semibold {{ 'text-success' if (product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 >= (product.effective_margin_threshold or 0) else 'text-danger' }}" id="marginStatus">
-                                                    {{ 'Above Threshold' if (product.selling_price_per_unit - product.cogs_per_unit) / product.selling_price_per_unit * 100 >= (product.effective_margin_threshold or 0) else 'Below Threshold' }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center pt-3 border-top">
-                            <div class="btn-group">
-                                <a href="{{ url_for('products.adjust_stock', product_id=product.id) }}" class="btn btn-info">
-                                    <i class="fas fa-boxes me-1"></i>Adjust Stock
+                        <div class="flex flex-wrap justify-between items-center gap-4">
+                            <div class="flex gap-2">
+                                <a href="{{ url_for('products.adjust_stock', product_id=product.id) }}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-boxes mr-1"></i>Adjust Stock
                                 </a>
-                                <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="btn btn-secondary">
-                                    <i class="fas fa-list me-1"></i>View Inventory
+                                <a href="{{ url_for('products.product_inventory', product_id=product.id) }}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-list mr-1"></i>View Inventory
                                 </a>
-                                <a href="{{ url_for('products.product_analytics_dashboard', product_id=product.id) }}" class="btn btn-success">
-                                    <i class="fas fa-chart-line me-1"></i>Analytics
+                                <a href="{{ url_for('products.product_analytics_dashboard', product_id=product.id) }}" class="inline-flex items-center px-3 py-1.5 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+                                    <i class="fas fa-chart-line mr-1"></i>Analytics
                                 </a>
                             </div>
-                            <div class="btn-group">
-                                <a href="{{ url_for('main.dashboard') }}" class="btn btn-outline-secondary">
-                                    <i class="fas fa-arrow-left me-1"></i>Back to Dashboard
+                            <div class="flex gap-2">
+                                <a href="{{ url_for('main.dashboard') }}" class="inline-flex items-center px-3 py-1.5 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    <i class="fas fa-arrow-left mr-1"></i>Back to Dashboard
                                 </a>
-                                {{ form.submit(class="btn btn-primary btn-lg") }}
+                                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                    Update Product
+                                </button>
                             </div>
                         </div>
                     </form>
@@ -160,37 +141,25 @@
 {{ super() }}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Auto-calculate margin when prices change
     function calculateMargin() {
-        const cogsInput = document.getElementById('cogs_per_unit');
-        const sellingInput = document.getElementById('selling_price_per_unit');
-
-        if (cogsInput && sellingInput) {
-            const cogs = parseFloat(cogsInput.value) || 0;
-            const selling = parseFloat(sellingInput.value) || 0;
-
-            if (selling > 0) {
-                const margin = ((selling - cogs) / selling * 100).toFixed(2);
-                document.getElementById('currentMargin').textContent = margin + '%';
-
-                const threshold = parseFloat('{{ product.effective_margin_threshold or 0 }}');
-                const statusEl = document.getElementById('marginStatus');
-                if (margin >= threshold) {
-                    statusEl.textContent = 'Above Threshold';
-                    statusEl.className = 'fw-semibold text-success';
-                } else {
-                    statusEl.textContent = 'Below Threshold';
-                    statusEl.className = 'fw-semibold text-danger';
-                }
+        const cogs = parseFloat(document.getElementById('cogs_per_unit').value) || 0;
+        const price = parseFloat(document.getElementById('selling_price_per_unit').value) || 0;
+        if (price > 0) {
+            const margin = ((price - cogs) / price * 100).toFixed(2);
+            document.getElementById('currentMargin').textContent = margin + '%';
+            const threshold = parseFloat('{{ product.effective_margin_threshold or 0 }}');
+            const statusEl = document.getElementById('marginStatus');
+            if (margin >= threshold) {
+                statusEl.textContent = 'Above Threshold';
+                statusEl.className = 'font-semibold text-green-600';
+            } else {
+                statusEl.textContent = 'Below Threshold';
+                statusEl.className = 'font-semibold text-red-600';
             }
         }
     }
-
-    // Add event listeners for real-time margin calculation
-    document.getElementById('cogs_per_unit')?.addEventListener('input', calculateMargin);
-    document.getElementById('selling_price_per_unit')?.addEventListener('input', calculateMargin);
-
-    // Calculate initial margin
+    document.getElementById('cogs_per_unit').addEventListener('input', calculateMargin);
+    document.getElementById('selling_price_per_unit').addEventListener('input', calculateMargin);
     calculateMargin();
 });
 </script>

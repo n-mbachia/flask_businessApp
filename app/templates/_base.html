@@ -6,153 +6,142 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <meta name="X-CSRFToken" content="{{ csrf_token() }}">
     <title>{% block title %}Profitability App{% endblock %}</title>
+
+    <!-- Preload critical assets -->
+    <link rel="preload" href="{{ url_for('static', filename='css/styles.css') }}" as="style">
+    <link rel="preload" href="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js" as="script">
+
+    <!-- Tailwind CSS (generated) -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+
+    <!-- to ensure awesome font loads for navbar -->  
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     
-    <!-- Preload critical CSS -->
-    <link rel="preload" href="{{ url_for('static', filename='css/lib/bootstrap.min.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="{{ url_for('static', filename='css/lib/bootstrap-icons.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    <link rel="preload" href="{{ url_for('static', filename='css/base.css') }}" as="style" onload="this.onload=null;this.rel='stylesheet'">
-    
-    <!-- Critical CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/bootstrap.min.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/lib/bootstrap-icons.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
-    
-    <!-- Non-critical CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/utilities.css') }}" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" media="print" onload="this.media='all'">
-    
-    <!-- Theme CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/variables.css') }}" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/themes/dark-mode.css') }}" media="(prefers-color-scheme: dark)" onload="this.media='all'">
-    
-    <!-- HTMX for Enhanced UX -->
+    <!-- Lucide Icons -->
+    <script defer src="https://cdn.jsdelivr.net/npm/lucide@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/htmx.min.js"></script>
     <script src="https://unpkg.com/htmx.org@1.9.10/dist/ext/ajax-header.js"></script>
-    
+
+    <!-- Alpine.js (for interactivity) -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <style>
+        /* Hide Alpine components until ready – prevents flicker */
+        [x-cloak] { display: none !important; }
+    </style>
+
     {% block extra_css %}{% endblock %}
     {% block extra_head %}{% endblock %}
-    
+
     <!-- Favicon -->
     <link rel="icon" href="{{ url_for('static', filename='img/favicon.ico') }}" type="image/x-icon">
-    
+
     <!-- Theme Color for Mobile Browsers -->
     <meta name="theme-color" content="#2C3639">
-    
+
     <!-- Apple Touch Icon -->
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/apple-touch-icon.png') }}">
-    
+
     <!-- Meta Tags -->
     <meta name="description" content="Profitability App - Track and analyze your business performance">
     <meta name="author" content="Profitability App">
-    
+
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website">
     <meta property="og:url" content="{{ request.url_root }}">
     <meta property="og:title" content="Profitability App">
     <meta property="og:description" content="Track and analyze your business performance">
     <meta property="og:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
-    
+
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="{{ request.url_root }}">
     <meta name="twitter:title" content="Profitability App">
     <meta name="twitter:description" content="Track and analyze your business performance">
     <meta name="twitter:image" content="{{ url_for('static', filename='img/og-image.jpg', _external=True) }}">
-    
+
     <!-- Canonical URL -->
     <link rel="canonical" href="{{ request.url_root }}">
-    
+
     <!-- Preconnect to external domains -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    
-    <!-- Preload critical JS -->
-    <link rel="preload" href="{{ url_for('static', filename='js/lib/jquery-3.6.0.min.js') }}" as="script">
-    <link rel="preload" href="{{ url_for('static', filename='js/lib/bootstrap.bundle.min.js') }}" as="script">
-    
+
     <script nonce="{{ g.csp_nonce }}">
         // Initialize any critical JS that needs to run early
         document.documentElement.classList.remove('no-js');
         document.documentElement.classList.add('js');
-        
-        // Function to load non-critical CSS
-        function loadCSS(href) {
-            const link = document.createElement('link');
-            link.href = href;
-            link.rel = 'stylesheet';
-            document.head.appendChild(link);
-        }
     </script>
 </head>
-<body class="d-flex flex-column min-vh-100">
+<body class="flex flex-col min-h-screen bg-gray-50 text-gray-900"
+      x-data="{ htmxLoading: false }"
+      @htmx:before-request.window="htmxLoading = true"
+      @htmx:after-request.window="htmxLoading = false"
+      @htmx:send-error.window="htmxLoading = false">
+
+    <!-- Global loading overlay for HTMX requests (optional) -->
+    <div x-show="htmxLoading" x-cloak class="fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white p-4 rounded-lg shadow-lg flex items-center space-x-3">
+            <div class="inline-block h-6 w-6 animate-spin rounded-full border-2 border-solid border-current border-r-transparent text-blue-600"></div>
+            <span class="text-gray-700">Processing...</span>
+        </div>
+    </div>
+
     {% include 'components/navigation.html' %}
-    
-    <main class="flex-grow-1">
+
+    <main class="flex-1">
+        <!-- Flash messages -->
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
-                <div class="container mt-4">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
                     {% for category, message in messages %}
-                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                            {{ message }}
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        {% set alert_class = {
+                            'success': 'bg-green-50 text-green-800 border-green-200',
+                            'error': 'bg-red-50 text-red-800 border-red-200',
+                            'warning': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+                            'info': 'bg-blue-50 text-blue-800 border-blue-200'
+                        }[category] or 'bg-gray-50 text-gray-800 border-gray-200' %}
+                        <div class="rounded-md p-4 mb-4 border {{ alert_class }} flex justify-between items-start" role="alert">
+                            <span>{{ message }}</span>
+                            <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
+                                <i data-lucide="x" class="w-4 h-4"></i>
+                            </button>
                         </div>
                     {% endfor %}
                 </div>
             {% endif %}
         {% endwith %}
-        
+
         {% block content %}{% endblock %}
     </main>
-    
+
+    {% include 'products/adjust_stock.html' %}
+
     {% include 'components/footer.html' %}
-    
+
+    <!-- Toast container (for custom notifications) -->
+    <div class="fixed bottom-0 right-0 p-4 z-50">
+        <div id="toastContainer" class="flex flex-col space-y-2"></div>
+    </div>
+
     <!-- Scripts -->
+    <!-- jQuery (optional – only needed if your custom scripts still depend on it) -->
     <script src="{{ url_for('static', filename='js/lib/jquery-3.6.0.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/lib/bootstrap.bundle.min.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/components/stock-adjuster.js') }}"></script>
-    
+
+    <!-- Custom JS components (adjust as needed) -->
+    <!-- script src="{{ url_for('static', filename='js/components/stock-adjuster.js') }}"></script -->
+
     {% block scripts %}{% endblock %}
-    
-    <!-- Initialize components after all scripts are loaded -->
+
+    <!-- Optional: initialize any JS that doesn't rely on Bootstrap -->
     <script>
-        // Wait for both DOM and all scripts to be loaded
         window.addEventListener('load', function() {
-            // Check if jQuery is available
-            if (typeof jQuery === 'undefined') {
-                console.error('jQuery is not loaded');
-                return;
+            if (window.lucide) {
+                lucide.createIcons();
             }
-            
-            // Check if Bootstrap is available
-            if (typeof bootstrap === 'undefined') {
-                console.error('Bootstrap is not loaded');
-                return;
-            }
-
-            // Initialize tooltips
-            jQuery(document).ready(function($) {
-                // Initialize tooltips
-                var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-                tooltipTriggerList.map(function (tooltipTriggerEl) {
-                    return new bootstrap.Tooltip(tooltipTriggerEl, {
-                        trigger: 'hover'
-                    });
-                });
-
-                // Initialize popovers
-                var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
-                popoverTriggerList.map(function (popoverTriggerEl) {
-                    return new bootstrap.Popover(popoverTriggerEl, {
-                        trigger: 'focus'
-                    });
-                });
-            });
         });
     </script>
-    
-    <!-- Toast Container -->
-    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1100">
-        <div id="toastContainer" class="toast-container"></div>
-    </div>
 </body>
 </html>

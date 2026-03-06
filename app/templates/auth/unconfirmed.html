@@ -1,46 +1,42 @@
 {% extends "_base.html" %}
-
-{% block title %}Unconfirmed Account{% endblock %}
+{% block title %}Unconfirmed Account - Profitability App{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-8 col-lg-6">
-            <div class="card shadow">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0">Account Not Confirmed</h4>
-                </div>
-                <div class="card-body">
-                    <div class="text-center mb-4">
-                        <i class="fas fa-envelope fa-5x text-primary mb-3"></i>
-                        <h3>Please confirm your account</h3>
-                    </div>
-                    
-                    <p class="lead">
-                        Welcome, {{ current_user.username }}! Before you can access this page, you need to confirm your account.
-                        Check your email ({{ current_user.email }}) for a confirmation link.
-                    </p>
-                    
-                    <p>
-                        Didn't receive the email? 
-                        <a href="{{ url_for('auth.resend_confirmation') }}" class="btn btn-link p-0">
-                            Click here to resend the confirmation email
-                        </a>.
-                    </p>
-                    
-                    <div class="alert alert-info mt-4">
-                        <i class="fas fa-info-circle me-2"></i>
-                        If you're having trouble finding the email, please check your spam folder.
-                    </div>
-                </div>
-                <div class="card-footer text-center">
-                    <a href="{{ url_for('auth.logout') }}" class="btn btn-outline-secondary me-2">
-                        <i class="fas fa-sign-out-alt me-1"></i> Logout
-                    </a>
-                    <a href="{{ url_for('main.index') }}" class="btn btn-outline-primary">
-                        <i class="fas fa-home me-1"></i> Return Home
-                    </a>
-                </div>
+<div class="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div class="sm:mx-auto sm:w-full sm:max-w-md">
+        <div class="bg-white shadow-lg rounded-lg p-8 text-center">
+            <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100 mb-4">
+                <i data-lucide="mail" class="w-6 h-6 text-blue-600"></i>
+            </div>
+            <h2 class="text-2xl font-bold text-gray-900 mb-2">Account Not Confirmed</h2>
+            <h3 class="text-lg font-medium text-gray-700 mb-4">Please confirm your account</h3>
+            
+            <p class="text-gray-600 mb-4">
+                Welcome, <span class="font-semibold">{{ current_user.username }}</span>! Before you can access this page, you need to confirm your account.
+                Check your email (<span class="font-semibold">{{ current_user.email }}</span>) for a confirmation link.
+            </p>
+            
+            <p class="text-gray-600 mb-6">
+                Didn't receive the email?
+                <a href="{{ url_for('auth.resend_confirmation') }}" class="text-blue-600 hover:text-blue-500 font-medium">
+                    Click here to resend the confirmation email
+                </a>.
+            </p>
+            
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-4 mb-6 text-left">
+                <p class="text-sm text-blue-800">
+                    <i data-lucide="info" class="w-4 h-4 mr-1"></i>
+                    If you're having trouble finding the email, please check your spam folder.
+                </p>
+            </div>
+            
+            <div class="flex justify-center space-x-4">
+                <a href="{{ url_for('auth.logout') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="log-out" class="w-4 h-4 mr-2"></i> Logout
+                </a>
+                <a href="{{ url_for('main.index') }}" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                    <i data-lucide="home" class="w-4 h-4 mr-2"></i> Return Home
+                </a>
             </div>
         </div>
     </div>

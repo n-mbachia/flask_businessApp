@@ -3,22 +3,32 @@
 {% block title %}{% block page_title %}{% endblock %} - Orders{% endblock %}
 
 {% block content %}
-<div class="container-fluid px-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h1 class="mt-4">{% block header_title %}Orders{% endblock %}</h1>
-        <div class="d-flex gap-2">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <h1 class="text-2xl font-bold text-gray-900">{% block header_title %}Orders{% endblock %}</h1>
+        <div class="flex flex-wrap gap-2">
             {% block header_actions %}{% endblock %}
         </div>
     </div>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
-            {% for category, message in messages %}
-                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            {% endfor %}
+            <div class="space-y-2 mb-6">
+                {% for category, message in messages %}
+                    {% set alert_class = {
+                        'success': 'bg-green-50 text-green-800 border-green-200',
+                        'error': 'bg-red-50 text-red-800 border-red-200',
+                        'warning': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+                        'info': 'bg-blue-50 text-blue-800 border-blue-200'
+                    }[category] or 'bg-gray-50 text-gray-800 border-gray-200' %}
+                    <div class="rounded-md p-4 border {{ alert_class }} flex justify-between items-start" role="alert">
+                        <span>{{ message }}</span>
+                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                {% endfor %}
+            </div>
         {% endif %}
     {% endwith %}
 
@@ -26,43 +36,40 @@
 </div>
 {% endblock %}
 
-{% block styles %}
-{{ super() }}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/pages/orders.css') }}">
-{% endblock %}
-
 {% block scripts %}
 {{ super() }}
-{% block order_scripts %}
-<script src="{{ url_for('static', filename='js/pages/orders/customer_search.js') }}"></script>
-{% endblock %}
+{% block order_scripts %}{% endblock %}
 <script>
-    // Format currency values
+    // Format currency and dates
     document.addEventListener('DOMContentLoaded', function() {
-        // Format currency fields
-        document.querySelectorAll('.currency').forEach(function(element) {
-            const value = parseFloat(element.textContent);
+        document.querySelectorAll('.currency').forEach(function(el) {
+            const value = parseFloat(el.textContent);
             if (!isNaN(value)) {
-                element.textContent = new Intl.NumberFormat('en-US', {
+                el.textContent = new Intl.NumberFormat('en-US', {
                     style: 'currency',
                     currency: 'USD'
                 }).format(value);
             }
         });
-        
-        // Format date fields
-        document.querySelectorAll('.date').forEach(function(element) {
-            const date = new Date(element.textContent);
+        document.querySelectorAll('.date').forEach(function(el) {
+            const date = new Date(el.textContent);
             if (!isNaN(date.getTime())) {
-                element.textContent = new Intl.DateTimeFormat('en-US', {
-                    year: 'numeric',
-                    month: 'short',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
+                el.textContent = new Intl.DateTimeFormat('en-US', {
+                    year: 'numeric', month: 'short', day: 'numeric',
+                    hour: '2-digit', minute: '2-digit'
                 }).format(date);
             }
         });
+
+        const filtersToggle = document.getElementById('filtersToggle');
+        const filtersCollapse = document.getElementById('filtersCollapse');
+        if (filtersToggle && filtersCollapse) {
+            filtersToggle.addEventListener('click', function() {
+                const isOpen = !filtersCollapse.classList.contains('hidden');
+                filtersCollapse.classList.toggle('hidden');
+                filtersToggle.setAttribute('aria-expanded', String(!isOpen));
+            });
+        }
     });
 </script>
 {% endblock %}
