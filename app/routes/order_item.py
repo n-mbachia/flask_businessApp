@@ -5,10 +5,11 @@ Handles CRUD operations for order items, including lot selection.
 """
 
 from flask import (
-    Blueprint, jsonify, request, abort, current_app, flash, redirect, url_for, render_template
+    Blueprint, jsonify, request, current_app, flash, redirect, url_for, render_template
 )
 from flask_login import login_required, current_user
 from sqlalchemy.orm import joinedload
+from werkzeug.exceptions import HTTPException
 from decimal import Decimal
 import json
 
@@ -28,15 +29,31 @@ logger = logging.getLogger(__name__)
 bp = Blueprint('order_items', __name__, url_prefix='/orders')
 
 
+def _get_order_or_404(order_id: int):
+    """Fetch an owned order or return 404."""
+    return Order.query.filter(
+        Order.id == order_id,
+        Order.user_id == current_user.id
+    ).first_or_404()
+
+
+def _get_order_item_or_404(item_id: int, *options):
+    """Fetch an owned order item by joining through the parent order."""
+    query = OrderItem.query.join(Order, OrderItem.order_id == Order.id).filter(
+        OrderItem.id == item_id,
+        Order.user_id == current_user.id
+    )
+    if options:
+        query = query.options(*options)
+    return query.first_or_404()
+
+
 @bp.route('/<int:order_id>/items/new', methods=['GET'])
 @login_required
 @check_confirmed
 def new_order_item(order_id):
     """Render form to add a new order item."""
-    order = Order.query.get_or_404(order_id)
-
-    if order.user_id != current_user.id:
-        abort(403)
+    order = _get_order_or_404(order_id)
 
     form = OrderItemForm()
     # Set product choices for the form
@@ -74,24 +91,7 @@ def add_order_item(order_id):
                 error_code='INVALID_ID'
             )
 
-        order = Order.query.get_or_404(order_id)
-
-        # Check ownership
-        if order.user_id != current_user.id:
-            SecurityUtils.log_security_event('unauthorized_order_item_add', {
-                'user_id': current_user.id,
-                'order_id': order_id,
-                'owner_id': order.user_id,
-                'ip': request.remote_addr
-            }, 'warning')
-            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return APIResponse.error(
-                    message="Unauthorized access to order",
-                    status_code=403,
-                    error_code='UNAUTHORIZED'
-                )
-            flash('Unauthorized access.', 'danger')
-            return redirect(url_for('orders.index'))
+        order = _get_order_or_404(order_id)
 
         if order.status in ['completed', 'cancelled']:
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -201,6 +201,8 @@ def add_order_item(order_id):
                                    order=order,
                                    action=url_for('order_items.add_order_item', order_id=order_id))
 
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in add_order_item: {str(e)}")
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -217,14 +219,11 @@ def add_order_item(order_id):
 @check_confirmed
 def edit_order_item(item_id):
     """Edit an existing order item, including lot changes."""
-    order_item = OrderItem.query.options(
+    order_item = _get_order_item_or_404(
+        item_id,
         joinedload(OrderItem.order),
         joinedload(OrderItem.product)
-    ).get_or_404(item_id)
-
-    # Check ownership
-    if order_item.order.user_id != current_user.id:
-        abort(403)
+    )
 
     if order_item.order.status in ['completed', 'cancelled']:
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -368,16 +367,11 @@ def edit_order_item(item_id):
 @check_confirmed
 def delete_order_item(item_id):
     """Delete an order item. No lot-specific changes needed."""
-    order_item = OrderItem.query.options(
+    order_item = _get_order_item_or_404(
+        item_id,
         joinedload(OrderItem.order),
         joinedload(OrderItem.product)
-    ).get_or_404(item_id)
-
-    if order_item.order.user_id != current_user.id:
-        if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-            return jsonify({'success': False, 'message': 'Unauthorized'}), 403
-        flash('Unauthorized access.', 'danger')
-        return redirect(url_for('orders.index'))
+    )
 
     if order_item.order.status in ['completed', 'cancelled']:
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':

@@ -102,7 +102,7 @@ def create_analytics_views():
 
     # Product Sales View
     if 'product_sales_view' in inspector.get_view_names():
-        db.session.execute(text('DROP VIEW product_sales_view'))
+        db.session.execute(text('DROP VIEW IF EXISTS product_sales_view'))
         db.session.commit()
     
     db.session.execute(text("""

@@ -54,6 +54,15 @@ def _can_request_password_reset() -> bool:
 def _record_password_reset_request():
     session['last_password_reset_request'] = datetime.utcnow().isoformat()
 
+
+def _default_post_login_redirect(user: User) -> str:
+    """Choose the default landing page based on user role."""
+    if getattr(user, 'is_admin', False):
+        return url_for('storefront.pending_products')
+    if getattr(user, 'is_vendor', False):
+        return url_for('storefront.vendor_portal')
+    return url_for('main.dashboard')
+
 @auth_bp.route('/register', methods=['GET', 'POST'])
 @handle_exceptions
 @rate_limit(max_calls=3, period=300)  # 3 registrations per 5 minutes
@@ -170,7 +179,7 @@ def login():
     Supports both regular form submissions and AJAX requests.
     """
     if current_user.is_authenticated:
-        return redirect(url_for('main.dashboard'))
+        return redirect(_default_post_login_redirect(current_user))
         
     form = LoginForm()
     
@@ -247,14 +256,15 @@ def login():
             # Validate next URL to prevent open redirects
             if not is_safe_url(next_page):
                 next_page = None
+            redirect_target = next_page or _default_post_login_redirect(user)
                 
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({
                     'status': 'success',
-                    'redirect': next_page or url_for('main.dashboard')
+                    'redirect': redirect_target
                 })
                 
-            return redirect(next_page or url_for('main.dashboard'))
+            return redirect(redirect_target)
             
         except Exception as e:
             logger.error(f"Login error: {str(e)}", exc_info=True)

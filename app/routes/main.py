@@ -22,8 +22,8 @@ VALID_PERIODS: dict[str, int] = {'1m': 30, '3m': 90, '6m': 180, '1y': 365}
 
 @main_bp.route('/')
 def index():
-    """Redirect the root landing route to the storefront catalog."""
-    return redirect(url_for('storefront.catalog'))
+    """Render public About page for prospects and new users."""
+    return render_template('index.html')
 
 @main_bp.route('/terms')
 def terms():
@@ -437,7 +437,12 @@ def get_default_dashboard_context(period: str) -> dict[str, Any]:
             'revenue_by_category': {},
             'average_order_value': 0.0,
             'recurring_revenue': 0.0,
-            'customer_count': 0
+            'customer_count': 0,
+            'source_breakdown': {
+                'manual': {'revenue': 0.0, 'orders': 0, 'customers': 0},
+                'storefront': {'revenue': 0.0, 'orders': 0, 'customers': 0},
+                'combined': {'revenue': 0.0, 'orders': 0, 'customers': 0}
+            }
         },
         'expenses': {
             'total_expenses': 0.0,
@@ -452,7 +457,45 @@ def get_default_dashboard_context(period: str) -> dict[str, Any]:
             'net_profit': 0.0,
             'net_margin': 0.0,
             'roi': 0.0,
-            'break_even_point': 0.0
+            'break_even_point': 0.0,
+            'source_breakdown': {
+                'manual': {
+                    'revenue': 0.0,
+                    'subtotal': 0.0,
+                    'tax': 0.0,
+                    'orders': 0,
+                    'avg_order_value': 0.0,
+                    'gross_profit': 0.0,
+                    'gross_margin': 0.0,
+                    'allocated_overhead': 0.0,
+                    'net_profit': 0.0,
+                    'net_margin': 0.0
+                },
+                'storefront': {
+                    'revenue': 0.0,
+                    'subtotal': 0.0,
+                    'tax': 0.0,
+                    'orders': 0,
+                    'avg_order_value': 0.0,
+                    'gross_profit': 0.0,
+                    'gross_margin': 0.0,
+                    'allocated_overhead': 0.0,
+                    'net_profit': 0.0,
+                    'net_margin': 0.0
+                },
+                'combined': {
+                    'revenue': 0.0,
+                    'subtotal': 0.0,
+                    'tax': 0.0,
+                    'orders': 0,
+                    'avg_order_value': 0.0,
+                    'gross_profit': 0.0,
+                    'gross_margin': 0.0,
+                    'allocated_overhead': 0.0,
+                    'net_profit': 0.0,
+                    'net_margin': 0.0
+                }
+            }
         },
         'cash_flow': {
             'operating_cash_flow': 0.0,

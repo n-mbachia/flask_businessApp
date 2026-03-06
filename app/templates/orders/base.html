@@ -3,36 +3,43 @@
 {% block title %}{% block page_title %}{% endblock %} - Orders{% endblock %}
 
 {% block content %}
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">{% block header_title %}Orders{% endblock %}</h1>
-        <div class="flex flex-wrap gap-2">
-            {% block header_actions %}{% endblock %}
-        </div>
-    </div>
-
-    {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <div class="space-y-2 mb-6">
-                {% for category, message in messages %}
-                    {% set alert_class = {
-                        'success': 'bg-green-50 text-green-800 border-green-200',
-                        'error': 'bg-red-50 text-red-800 border-red-200',
-                        'warning': 'bg-yellow-50 text-yellow-800 border-yellow-200',
-                        'info': 'bg-blue-50 text-blue-800 border-blue-200'
-                    }[category] or 'bg-gray-50 text-gray-800 border-gray-200' %}
-                    <div class="rounded-md p-4 border {{ alert_class }} flex justify-between items-start" role="alert">
-                        <span>{{ message }}</span>
-                        <button type="button" class="text-gray-400 hover:text-gray-600" onclick="this.parentElement.remove()">
-                            <i class="fas fa-times"></i>
-                        </button>
-                    </div>
-                {% endfor %}
+<div class="bg-gradient-to-br from-slate-50 via-white to-blue-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <section class="mb-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+            <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+                <div>
+                    <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Operations Workspace</p>
+                    <h1 class="mt-2 text-3xl font-bold text-slate-900">{% block header_title %}Orders{% endblock %}</h1>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    {% block header_actions %}{% endblock %}
+                </div>
             </div>
-        {% endif %}
-    {% endwith %}
+        </section>
 
-    {% block order_content %}{% endblock %}
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="space-y-2 mb-6">
+                    {% for category, message in messages %}
+                        {% set alert_class = {
+                            'success': 'bg-green-50 text-green-800 border-green-200',
+                            'error': 'bg-red-50 text-red-800 border-red-200',
+                            'warning': 'bg-yellow-50 text-yellow-800 border-yellow-200',
+                            'info': 'bg-blue-50 text-blue-800 border-blue-200'
+                        }[category] or 'bg-slate-50 text-slate-800 border-slate-200' %}
+                        <div class="rounded-xl p-4 border {{ alert_class }} flex justify-between items-start" role="alert">
+                            <span>{{ message }}</span>
+                            <button type="button" class="text-slate-400 hover:text-slate-600" onclick="this.parentElement.remove()">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block order_content %}{% endblock %}
+    </div>
 </div>
 {% endblock %}
 

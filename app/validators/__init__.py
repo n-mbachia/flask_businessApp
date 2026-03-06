@@ -188,7 +188,8 @@ def sanitize_input(input_string: str, sanitize_type: str = 'html') -> str:
         'html': InputSanitizer.sanitize_html,
         'sql': InputSanitizer.sanitize_sql,
         'filename': InputSanitizer.sanitize_filename,
-        'search': InputSanitizer.sanitize_search_query
+        'search': InputSanitizer.sanitize_search_query,
+        'text': InputSanitizer.sanitize_html
     }
     
     sanitizer = sanitizer_map.get(sanitize_type.lower())

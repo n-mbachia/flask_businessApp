@@ -2,217 +2,143 @@
 
 {% block title %}Edit Sale - {{ sale.id }}{% endblock %}
 
-{% block styles %}
+{% block extra_css %}
 {{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/pages/sales.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr@4.6.9/dist/plugins/monthSelect/style.min.css">
 {% endblock %}
 
 {% block content %}
+<div class="bg-gradient-to-br from-slate-50 via-white to-blue-50">
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-    <!-- Header -->
-    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-        <h1 class="text-2xl font-bold text-gray-900">Edit Sale #{{ sale.id }}</h1>
-        <nav class="text-sm" aria-label="Breadcrumb">
-            <ol class="flex items-center space-x-2 text-gray-500">
-                <li><a href="{{ url_for('main.dashboard') }}" class="hover:text-gray-700">Dashboard</a></li>
-                <li><span class="mx-2">/</span></li>
-                <li><a href="{{ url_for('sales.manage_sales') }}" class="hover:text-gray-700">Sales</a></li>
-                <li><span class="mx-2">/</span></li>
-                <li class="text-gray-900 font-medium" aria-current="page">Edit Sale</li>
-            </ol>
-        </nav>
-    </div>
+    <section class="mb-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Revenue Workspace</p>
+                <h1 class="mt-2 text-3xl font-bold text-slate-900">Edit Sale #{{ sale.id }}</h1>
+            </div>
+            <a href="{{ url_for('sales.manage_sales') }}" class="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500/20">
+                <i class="fas fa-arrow-left mr-2"></i> Back to Sales
+            </a>
+        </div>
+    </section>
 
     <div class="flex justify-center">
         <div class="w-full max-w-3xl space-y-6">
-            <!-- Edit Form Card -->
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <h5 class="font-semibold flex items-center">
-                        <i class="fas fa-edit mr-2"></i>
+            <section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <header class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <h2 class="font-semibold text-slate-900 flex items-center">
+                        <i class="fas fa-edit mr-2 text-slate-600"></i>
                         Edit Sale Details
-                    </h5>
-                </div>
+                    </h2>
+                </header>
                 <div class="p-6">
                     <form id="editSaleForm" method="POST" action="{{ url_for('sales.edit_sale', sale_id=sale.id) }}" novalidate>
                         {{ form.hidden_tag() }}
 
                         <div class="mb-4">
-                            <label for="product_id" class="block text-sm font-medium text-gray-700 mb-1">{{ form.product_id.label.text }}</label>
-                            <select name="product_id" id="product_id" disabled
-                                    class="block w-full rounded-md border-gray-300 bg-gray-100 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
+                            <label for="product_id" class="block text-sm font-medium text-slate-700 mb-1">{{ form.product_id.label.text }}</label>
+                            <select id="product_id" disabled class="block w-full rounded-xl border-slate-300 bg-slate-100 shadow-sm sm:text-sm">
                                 {% for value, label in form.product_id.choices %}
-                                    <option value="{{ value }}" {% if value == form.product_id.data %}selected{% endif %}>{{ label }}</option>
+                                    <option value="{{ value }}" {% if value == sale.product_id %}selected{% endif %}>{{ label }}</option>
                                 {% endfor %}
                             </select>
-                            <p class="mt-1 text-xs text-gray-500">Product cannot be changed after creation</p>
+                            <input type="hidden" name="product_id" value="{{ sale.product_id }}">
+                            <p class="mt-1 text-xs text-slate-500">Product is fixed for existing sales records.</p>
                         </div>
 
                         <div class="mb-4">
-                            <label for="date" class="block text-sm font-medium text-gray-700 mb-1">{{ form.date.label.text }}</label>
-                            <div class="flex rounded-md shadow-sm">
-                                <input type="text" id="date" name="date" value="{{ form.date.data.strftime('%Y-%m') if form.date.data }}"
-                                       class="flex-1 block w-full rounded-l-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                                <span class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500">
-                                    <i class="far fa-calendar-alt"></i>
-                                </span>
-                            </div>
+                            <label for="date" class="block text-sm font-medium text-slate-700 mb-1">{{ form.date.label.text }}</label>
+                            <input type="text" id="date" name="date" value="{{ form.date.data.strftime('%Y-%m') if form.date.data else sale.month }}" class="block w-full rounded-xl border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="YYYY-MM">
                             {% for error in form.date.errors %}
                                 <p class="mt-1 text-sm text-red-600">{{ error }}</p>
                             {% endfor %}
                         </div>
 
                         <div class="mb-4">
-                            <label for="units_sold" class="block text-sm font-medium text-gray-700 mb-1">{{ form.units_sold.label.text }}</label>
-                            <div class="flex rounded-md shadow-sm">
-                                <input type="number" id="units_sold" name="units_sold" min="1" step="1"
-                                       value="{{ form.units_sold.data }}"
-                                       class="flex-1 block w-full rounded-md border-gray-300 focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            </div>
+                            <label for="units_sold" class="block text-sm font-medium text-slate-700 mb-1">{{ form.units_sold.label.text }}</label>
+                            <input type="number" id="units_sold" name="units_sold" min="1" step="1" value="{{ form.units_sold.data if form.units_sold.data is not none else sale.units_sold }}" class="block w-full rounded-xl border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
                             {% for error in form.units_sold.errors %}
                                 <p class="mt-1 text-sm text-red-600">{{ error }}</p>
                             {% endfor %}
-                            <p class="mt-1 text-xs text-gray-600">
-                                Available: <span id="availableStock">{{ sale.product.quantity_available + sale.units_sold }}</span> units
-                            </p>
+                            <p class="mt-1 text-xs text-slate-500">Available stock: {{ sale.product.current_stock }}</p>
                         </div>
 
                         <div class="mb-4">
-                            <label for="customer_name" class="block text-sm font-medium text-gray-700 mb-1">{{ form.customer_name.label.text }}</label>
-                            <input type="text" id="customer_name" name="customer_name" value="{{ form.customer_name.data }}"
-                                   class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">
-                            {% for error in form.customer_name.errors %}
-                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                            {% endfor %}
+                            <label for="customer_name" class="block text-sm font-medium text-slate-700 mb-1">{{ form.customer_name.label.text }}</label>
+                            <input type="text" id="customer_name" name="customer_name" value="{{ form.customer_name.data or '' }}" class="block w-full rounded-xl border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="Optional">
                         </div>
 
                         <div class="mb-6">
-                            <label for="notes" class="block text-sm font-medium text-gray-700 mb-1">{{ form.notes.label.text }}</label>
-                            <textarea id="notes" name="notes" rows="3"
-                                      class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm">{{ form.notes.data or '' }}</textarea>
-                            {% for error in form.notes.errors %}
-                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                            {% endfor %}
+                            <label for="notes" class="block text-sm font-medium text-slate-700 mb-1">{{ form.notes.label.text }}</label>
+                            <textarea id="notes" name="notes" rows="3" class="block w-full rounded-xl border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">{{ form.notes.data or '' }}</textarea>
                         </div>
 
                         <div class="flex justify-between">
-                            <button type="button" @click="$dispatch('open-delete-modal')"
-                                    class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+                            <button type="button" @click="$dispatch('open-delete-modal')" class="inline-flex items-center px-4 py-2 rounded-xl border border-transparent text-sm font-semibold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20">
                                 <i class="fas fa-trash-alt mr-2"></i> Delete
                             </button>
                             <div>
-                                <a href="{{ url_for('sales.manage_sales') }}" class="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 mr-2">
-                                    <i class="fas fa-times mr-2"></i> Cancel
+                                <a href="{{ url_for('sales.manage_sales') }}" class="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500/20 mr-2">
+                                    Cancel
                                 </a>
-                                <button type="submit" id="saveBtn"
-                                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                                <button type="submit" id="saveBtn" class="inline-flex items-center px-4 py-2 rounded-xl border border-transparent text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/20">
                                     <span class="spinner-border hidden animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" role="status"></span>
-                                    <i class="fas fa-save mr-2"></i> Save Changes
+                                    Save Changes
                                 </button>
                             </div>
                         </div>
                     </form>
                 </div>
-            </div>
+            </section>
 
-            <!-- Sale Information Card -->
-            <div class="bg-white shadow rounded-lg overflow-hidden">
-                <div class="px-4 py-3 bg-gray-50 border-b border-gray-200">
-                    <h5 class="font-semibold flex items-center">
-                        <i class="fas fa-info-circle mr-2"></i>
+            <section class="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <header class="px-4 py-3 bg-slate-50 border-b border-slate-200">
+                    <h2 class="font-semibold text-slate-900 flex items-center">
+                        <i class="fas fa-info-circle mr-2 text-slate-600"></i>
                         Sale Information
-                    </h5>
-                </div>
+                    </h2>
+                </header>
                 <div class="p-6">
                     <dl class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Product:</dt>
-                            <dd class="font-medium">{{ sale.product.name }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Unit Price:</dt>
-                            <dd class="font-medium">{{ "${:,.2f}".format(sale.product.selling_price_per_unit) }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Total Amount:</dt>
-                            <dd class="font-medium">{{ "${:,.2f}".format(sale.units_sold * sale.product.selling_price_per_unit) }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Created:</dt>
-                            <dd class="font-medium">{{ sale.created_at.strftime('%b %d, %Y %I:%M %p') }}</dd>
-                        </div>
-                        <div class="flex justify-between">
-                            <dt class="text-gray-500">Last Updated:</dt>
-                            <dd class="font-medium">{{ sale.updated_at.strftime('%b %d, %Y %I:%M %p') }}</dd>
-                        </div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Product:</dt><dd class="font-medium">{{ sale.product.name }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Unit Price:</dt><dd class="font-medium">{{ "${:,.2f}".format(sale.product.selling_price_per_unit) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Current Total:</dt><dd class="font-medium">{{ "${:,.2f}".format((sale.total_revenue or 0)|float) }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Created:</dt><dd class="font-medium">{{ sale.created_at.strftime('%b %d, %Y %I:%M %p') }}</dd></div>
+                        <div class="flex justify-between"><dt class="text-slate-500">Last Updated:</dt><dd class="font-medium">{{ sale.updated_at.strftime('%b %d, %Y %I:%M %p') }}</dd></div>
                     </dl>
                 </div>
-            </div>
+            </section>
         </div>
     </div>
 </div>
+</div>
 
-<!-- Delete Confirmation Modal (Alpine) -->
 <div x-data="{ open: false }"
      x-show="open"
      x-cloak
      @open-delete-modal.window="open = true"
      @keydown.escape.window="open = false"
      class="fixed inset-0 z-50 overflow-y-auto"
-     aria-labelledby="deleteModalLabel"
      role="dialog"
      aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
-        <div x-show="open"
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-             @click="open = false"
-             aria-hidden="true"></div>
-
-        <!-- Modal panel -->
-        <div x-show="open"
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+        <div x-show="open" class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity" @click="open = false" aria-hidden="true"></div>
+        <div x-show="open" class="inline-block align-bottom bg-white rounded-2xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
             <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <div class="flex items-start">
-                    <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
-                        <i class="fas fa-exclamation-triangle text-red-600"></i>
-                    </div>
-                    <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
-                        <h3 class="text-lg font-medium text-gray-900" id="deleteModalLabel">Confirm Deletion</h3>
-                        <div class="mt-2">
-                            <p class="text-sm text-gray-500">Are you sure you want to delete this sale record? This action cannot be undone.</p>
-                        </div>
-                        <div class="mt-3 bg-yellow-50 border border-yellow-200 rounded-md p-3 text-sm text-yellow-800">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>
-                            This will permanently remove the sale record from the system.
-                        </div>
-                    </div>
-                </div>
+                <h3 class="text-lg font-semibold text-slate-900">Confirm Deletion</h3>
+                <p class="mt-2 text-sm text-slate-500">Are you sure you want to delete this sale record? This action cannot be undone.</p>
             </div>
-            <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+            <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                 <form id="deleteForm" action="{{ url_for('sales.delete_sale', sale_id=sale.id) }}" method="POST" class="inline">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-                    <button type="submit" id="confirmDeleteBtn"
-                            class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-base font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 sm:ml-3 sm:w-auto sm:text-sm">
+                    <button type="submit" id="confirmDeleteBtn" class="w-full inline-flex justify-center items-center px-4 py-2 rounded-xl border border-transparent text-sm font-semibold text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/20 sm:ml-3 sm:w-auto">
                         <span class="spinner-border hidden animate-spin inline-block w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2" role="status"></span>
                         Delete Sale
                     </button>
                 </form>
-                <button type="button" @click="open = false"
-                        class="mt-3 w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 shadow-sm text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                <button type="button" @click="open = false" class="mt-3 w-full inline-flex justify-center items-center px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500/20 sm:mt-0 sm:ml-3 sm:w-auto">
                     Cancel
                 </button>
             </div>
@@ -224,109 +150,103 @@
 {% block scripts %}
 {{ super() }}
 <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/flatpickr@4.6.9/dist/plugins/monthSelect/index.min.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize date picker
-    flatpickr("#date", {
-        dateFormat: "Y-m",
-        defaultDate: "{{ form.date.data.strftime('%Y-%m') if form.date.data }}",
-        allowInput: true,
-        plugins: [new monthSelectPlugin({shorthand: true, dateFormat: "Y-m"})]
-    });
+    if (typeof flatpickr !== 'undefined') {
+        const monthPlugins = typeof monthSelectPlugin !== 'undefined'
+            ? [new monthSelectPlugin({ shorthand: true, dateFormat: 'Y-m' })]
+            : [];
 
-    // Handle form submission
+        flatpickr('#date', {
+            dateFormat: monthPlugins.length ? 'Y-m' : 'Y-m-d',
+            defaultDate: '{{ form.date.data.strftime("%Y-%m") if form.date.data else sale.month }}',
+            allowInput: true,
+            plugins: monthPlugins
+        });
+    }
+
     const form = document.getElementById('editSaleForm');
     const saveBtn = document.getElementById('saveBtn');
-    const spinner = saveBtn.querySelector('.spinner-border');
+    const saveSpinner = saveBtn?.querySelector('.spinner-border');
 
-    form.addEventListener('submit', function(e) {
+    form?.addEventListener('submit', async function(e) {
         e.preventDefault();
 
-        // Show loading state
-        saveBtn.disabled = true;
-        spinner.classList.remove('hidden');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveSpinner?.classList.remove('hidden');
+        }
 
-        // Submit via fetch
-        fetch(form.action, {
-            method: 'POST',
-            body: new FormData(form),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': '{{ csrf_token() }}'
+        try {
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: new FormData(form),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                }
+            });
+
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.status === 'success') {
+                window.location.href = '{{ url_for("sales.manage_sales") }}';
+                return;
             }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                window.location.href = "{{ url_for('sales.manage_sales') }}";
-            } else {
-                alert(data.message || 'An error occurred while saving the sale.');
-                saveBtn.disabled = false;
-                spinner.classList.add('hidden');
-            }
-        })
-        .catch(error => {
+
+            alert(data.message || 'An error occurred while saving the sale.');
+        } catch (error) {
             console.error('Error:', error);
             alert('An error occurred while saving the sale.');
-            saveBtn.disabled = false;
-            spinner.classList.add('hidden');
-        });
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveSpinner?.classList.add('hidden');
+            }
+        }
     });
 
-    // Handle delete form submission
     const deleteForm = document.getElementById('deleteForm');
     const deleteBtn = document.getElementById('confirmDeleteBtn');
     const deleteSpinner = deleteBtn?.querySelector('.spinner-border');
 
-    if (deleteForm) {
-        deleteForm.addEventListener('submit', function(e) {
-            e.preventDefault();
+    deleteForm?.addEventListener('submit', async function(e) {
+        e.preventDefault();
 
-            // Show loading state
+        if (deleteBtn) {
             deleteBtn.disabled = true;
-            deleteSpinner.classList.remove('hidden');
+            deleteSpinner?.classList.remove('hidden');
+        }
 
-            fetch(deleteForm.action, {
+        try {
+            const response = await fetch(deleteForm.action, {
                 method: 'POST',
                 body: new FormData(deleteForm),
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
                     'X-CSRFToken': '{{ csrf_token() }}'
                 }
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.status === 'success') {
-                    window.location.href = "{{ url_for('sales.manage_sales') }}";
-                } else {
-                    alert(data.message || 'An error occurred while deleting the sale.');
-                    deleteBtn.disabled = false;
-                    deleteSpinner.classList.add('hidden');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('An error occurred while deleting the sale.');
-                deleteBtn.disabled = false;
-                deleteSpinner.classList.add('hidden');
             });
-        });
-    }
 
-    // Validate units_sold against available stock
-    const unitsSoldInput = document.getElementById('units_sold');
-    const availableStockSpan = document.getElementById('availableStock');
-    if (unitsSoldInput && availableStockSpan) {
-        const maxAvailable = parseInt(availableStockSpan.textContent);
-        unitsSoldInput.addEventListener('change', function() {
-            const value = parseInt(this.value) || 0;
-            if (value > maxAvailable) {
-                this.setCustomValidity(`Cannot exceed available stock of ${maxAvailable} units`);
-            } else {
-                this.setCustomValidity('');
+            const data = await response.json().catch(() => ({}));
+            if (response.ok && data.status === 'success') {
+                window.location.href = '{{ url_for("sales.manage_sales") }}';
+                return;
             }
-        });
-    }
+
+            alert(data.message || 'An error occurred while deleting the sale.');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('An error occurred while deleting the sale.');
+        } finally {
+            if (deleteBtn) {
+                deleteBtn.disabled = false;
+                deleteSpinner?.classList.add('hidden');
+            }
+        }
+    });
 });
 </script>
 {% endblock %}

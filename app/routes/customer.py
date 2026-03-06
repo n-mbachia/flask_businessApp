@@ -1,6 +1,6 @@
 from flask import (
     Blueprint, render_template, redirect, url_for,
-    flash, request, jsonify, abort, current_app
+    flash, request, jsonify, current_app
 )
 
 from flask_login import login_required, current_user
@@ -26,6 +26,16 @@ except ImportError:
     _HAS_CUSTOMER_SERVICE = False
 
 customer_bp = Blueprint('customer', __name__)
+
+
+def _customers_for_current_user():
+    """Return a customer query scoped to the authenticated user."""
+    return Customer.query.filter(Customer.user_id == current_user.id)
+
+
+def _get_customer_or_404(customer_id: int):
+    """Fetch an owned customer or return 404."""
+    return _customers_for_current_user().filter(Customer.id == customer_id).first_or_404()
 
 
 class SafePagination:
@@ -260,11 +270,7 @@ def create():
 @check_confirmed
 def view(id):
     """View a customer's details."""
-    customer = Customer.query.get_or_404(id)
-    
-    # Ensure the customer belongs to the current user
-    if customer.user_id != current_user.id:
-        abort(403)
+    customer = _get_customer_or_404(id)
     
     return render_template('customers/view.html', customer=customer)
 
@@ -273,11 +279,7 @@ def view(id):
 @check_confirmed
 def edit(id):
     """Edit an existing customer."""
-    customer = Customer.query.get_or_404(id)
-    
-    # Ensure the customer belongs to the current user
-    if customer.user_id != current_user.id:
-        abort(403)
+    customer = _get_customer_or_404(id)
     
     form = CustomerForm(obj=customer)
     
@@ -304,11 +306,7 @@ def edit(id):
 @check_confirmed
 def delete(id):
     """Delete a customer."""
-    customer = Customer.query.get_or_404(id)
-    
-    # Ensure the customer belongs to the current user
-    if customer.user_id != current_user.id:
-        abort(403)
+    customer = _get_customer_or_404(id)
     
     try:
         # Check if customer has orders
@@ -487,11 +485,7 @@ def search_api():
 @check_confirmed
 def toggle_status(id):
     """Toggle customer active status (AJAX endpoint)."""
-    customer = Customer.query.get_or_404(id)
-    
-    # Ensure the customer belongs to the current user
-    if customer.user_id != current_user.id:
-        return jsonify({'success': False, 'message': 'Unauthorized'}), 403
+    customer = _get_customer_or_404(id)
     
     try:
         customer.is_active = not customer.is_active
@@ -509,11 +503,7 @@ def toggle_status(id):
 @login_required
 def customer_details(id):
     """Get customer details in JSON format."""
-    customer = Customer.query.get_or_404(id)
-    
-    # Ensure the customer belongs to the current user
-    if customer.user_id != current_user.id:
-        return jsonify({'error': 'Unauthorized'}), 403
+    customer = _get_customer_or_404(id)
     
     return jsonify({
         'id': customer.id,

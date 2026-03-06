@@ -3,7 +3,6 @@ Application factory for the Flask application.
 """
 import os
 from flask import Flask, request, jsonify, current_app, session
-import click
 try:
     from flask_caching import Cache
     _HAS_FLASK_CACHING = True
@@ -40,27 +39,45 @@ login_manager.login_view = 'auth.login'
 login_manager.login_message_category = 'info'
 login_manager.session_protection = 'strong'
 
-# Handle optional extensions
-if _HAS_FLASK_MAIL:
-    mail = Mail()
-else:
-    class _NullMail:
-        def init_app(self, app):
-            app.logger.warning('Flask-Mail not installed; email sending disabled.')
-    mail = _NullMail()
+# Null object pattern for optional extensions
+class _NullMail:
+    def init_app(self, app):
+        app.logger.warning('Flask-Mail not installed; email sending disabled.')
+    
+    def send(self, message):
+        app.logger.warning(f'Mail not sent (Flask-Mail not installed): {getattr(message, "subject", "unknown")}')
 
-if _HAS_FLASK_CACHING:
-    cache = Cache()
-else:
-    cache = None
+class _NullCache:
+    def init_app(self, app, config=None):
+        app.logger.warning('Flask-Caching not installed; cache features disabled.')
+    
+    def get(self, *args, **kwargs): return None
+    def set(self, *args, **kwargs): pass
+    def delete(self, *args, **kwargs): pass
+    def cached(self, *args, **kwargs):
+        def decorator(f): return f
+        return decorator
+
+class _NullSocketIO:
+    def init_app(self, app, **kwargs):
+        app.logger.warning('Flask-SocketIO not installed; realtime features disabled.')
+    
+    def on(self, event, *args, **kwargs):
+        def decorator(f): return f
+        return decorator
+    
+    def emit(self, *args, **kwargs): pass
+    def broadcast(self, *args, **kwargs): pass
+
+# Handle optional extensions with consistent null object pattern
+mail = Mail() if _HAS_FLASK_MAIL else _NullMail()
+cache = Cache() if _HAS_FLASK_CACHING else _NullCache()
+socketio = SocketIO() if _HAS_FLASK_SOCKETIO else _NullSocketIO()
 
 compress = Compress()
 csrf = CSRFProtect()
 cors = CORS()
-if _HAS_FLASK_SOCKETIO:
-    socketio = SocketIO()
-else:
-    socketio = None
+
 
 def create_app(config_name='default'):
     """Application factory function."""
@@ -70,137 +87,91 @@ def create_app(config_name='default'):
     app = Flask(__name__, static_folder='static')
 
     # Load configuration
-    config_map = config
     if isinstance(config_name, str):
-        config_class = config_map[config_name]
+        config_class = config.get(config_name, config['default'])
+        app.config.from_object(config_class)
+        if hasattr(config_class, 'init_app'):
+            config_class.init_app(app)
     elif isinstance(config_name, type):
-        config_class = config_name
+        app.config.from_object(config_name)
+        if hasattr(config_name, 'init_app'):
+            config_name.init_app(app)
+    elif isinstance(config_name, object):
+        app.config.from_object(config_name)
+        if hasattr(config_name, 'init_app'):
+            config_name.init_app(app)
     else:
-        config_class = config_map['default']
+        default_cfg = config['default']
+        app.config.from_object(default_cfg)
+        default_cfg.init_app(app)
 
-    app.config.from_object(config_class)
-    config_class.init_app(app)
+    # CRITICAL: Ensure SQLALCHEMY_DATABASE_URI is set before db.init_app
+    if not app.config.get('SQLALCHEMY_DATABASE_URI'):
+        raise RuntimeError(
+            "SQLALCHEMY_DATABASE_URI must be set in configuration. "
+            "Check that your config class defines this attribute."
+        )
 
     # Initialize extensions
     db.init_app(app)
-    migrate.init_app(app, db)  # Initialize Flask-Migrate after db
+    migrate.init_app(app, db)
     login_manager.init_app(app)
     csrf.init_app(app)
     mail.init_app(app)
     compress.init_app(app)
-    cors.init_app(app)
-    if socketio is not None:
-        socketio.init_app(
-            app,
-            cors_allowed_origins="*",
-            async_mode='threading',
-            logger=False,
-            engineio_logger=False
-        )
+    
+    # Configure CORS with restrictive defaults
+    cors_origins = app.config.get('CORS_ALLOWED_ORIGINS', 
+                                  ['http://localhost:3000', 'http://127.0.0.1:3000'] if app.debug else [])
+    cors.init_app(app, resources={
+        r"/api/*": {"origins": cors_origins, "supports_credentials": True},
+        r"/socket.io/*": {"origins": cors_origins} if _HAS_FLASK_SOCKETIO else {}
+    })
+    
+    socketio.init_app(
+        app,
+        cors_allowed_origins=cors_origins or "*",
+        async_mode='threading',
+        logger=app.debug,
+        engineio_logger=app.debug
+    )
 
     # Configure session settings
-    app.config['SESSION_COOKIE_SECURE'] = app.config.get('SESSION_COOKIE_SECURE', False)
+    app.config['SESSION_COOKIE_SECURE'] = app.config.get('SESSION_COOKIE_SECURE', not app.debug)
     app.config['SESSION_COOKIE_HTTPONLY'] = app.config.get('SESSION_COOKIE_HTTPONLY', True)
     app.config['SESSION_COOKIE_SAMESITE'] = app.config.get('SESSION_COOKIE_SAMESITE', 'Lax')
     app.config['PERMANENT_SESSION_LIFETIME'] = app.config.get('PERMANENT_SESSION_LIFETIME', 3600)
 
-    print("SECRET_KEY:", app.config['SECRET_KEY'])
-    print("SESSION_COOKIE_SECURE:", app.config['SESSION_COOKIE_SECURE'])
-    print("SESSION_COOKIE_DOMAIN:", app.config.get('SESSION_COOKIE_DOMAIN'))
+    # Secure logging - never expose SECRET_KEY
+    if app.debug:
+        app.logger.debug("SECRET_KEY configured: [MASKED]")
+        app.logger.debug(f"SESSION_COOKIE_SECURE: {app.config['SESSION_COOKIE_SECURE']}")
+        app.logger.debug(f"SESSION_COOKIE_DOMAIN: {app.config.get('SESSION_COOKIE_DOMAIN', 'Not set')}")
     
     # Configure cache
-    if cache is not None:
-        cache_config = {
-            'CACHE_TYPE': 'simple',
-            'CACHE_DEFAULT_TIMEOUT': 300,
-            'CACHE_THRESHOLD': 1000,
-        }
-        cache_config.update(app.config.get_namespace('CACHE_'))
-        cache.init_app(app, config=cache_config)
-    else:
-        app.logger.warning('Flask-Caching not installed; cache features disabled.')
+    cache_config = {
+        'CACHE_TYPE': 'simple',
+        'CACHE_DEFAULT_TIMEOUT': 300,
+        'CACHE_THRESHOLD': 1000,
+    }
+    cache_config.update(app.config.get_namespace('CACHE_'))
+    cache.init_app(app, config=cache_config)
 
-    # ---- DIAGNOSTIC LOGGING: before_request hook ----
-    @app.before_request
-    def check_db_before_request():
-        try:
-            # Try a simple no-op query to test the connection
-            db.session.execute(text('SELECT 1'))
-            app.logger.info("Database connection is healthy before request.")
-        except Exception as e:
-            app.logger.error(f"Database connection is BROKEN before request: {e}")
+    # Register request hooks
+    _register_request_hooks(app)
 
-    @app.before_request
-    def log_request_info():
-        """Log details of every request to help trace transaction issues."""
-        app.logger.info(f"Request: {request.method} {request.path} from {request.remote_addr}")
-        if request.method in ['POST', 'PUT', 'DELETE']:
-            # Log form data (excluding passwords for security)
-            safe_data = request.form.to_dict()
-            if 'password' in safe_data:
-                safe_data['password'] = '[FILTERED]'
-            if 'password_hash' in safe_data:
-                safe_data['password_hash'] = '[FILTERED]'
-            app.logger.info(f"Request data: {safe_data}")
-    
-    @app.before_request
-    def clear_stale_transaction():
-        """Roll back any stale transaction before processing the request."""
-        try:
-            db.session.rollback()
-        except Exception as e:
-            app.logger.error(f"Failed to roll back stale transaction: {e}")
-        # Debug: print session contents (only for development)
-        if app.debug:
-            print("Session contents:", dict(session))
-    
-    # ---- ENHANCED TEARDOWN: handle exceptions and clean up session ----
-    @app.teardown_appcontext
-    def shutdown_session(exception=None):
-        """Automatically clean up the session after each request.
-        If an exception occurred or the session is dirty, roll back.
-        If rollback fails, dispose the engine to force new connections."""
-        if exception:
-            app.logger.error(f"Teardown called with exception: {exception}")
-        if exception or db.session.is_active:
-            try:
-                db.session.rollback()
-                app.logger.info("Session rolled back in teardown.")
-            except Exception as e:
-                app.logger.error(f"Rollback failed in teardown: {e}. Disposing engine.")
-                db.session.close()
-                db.engine.dispose()  # Discard all connections – they will be recreated fresh
-        db.session.remove()
-
-    # Import User model here to avoid circular imports
-    from .models.users import User
-
-    @login_manager.user_loader
-    def load_user(user_id):
-        """Load user by ID for Flask-Login."""
-        return db.session.get(User, int(user_id))
+    # Register user loader
+    _register_user_loader(app)
 
     # Register blueprints
     register_blueprints(app)
 
-    # Register CLI helpers (needs app context)
-    register_cli_commands(app)
+    # Register CLI commands (modular)
+    from app.cli import register_all_commands
+    register_all_commands(app)
 
-    # Register Socket.IO handlers and initialize realtime dashboard service.
-    if socketio is not None:
-        try:
-            from app.services.socketio_handlers import (
-                register_socketio_events,
-                init_realtime_dashboard
-            )
-            register_socketio_events(socketio)
-            realtime_service = init_realtime_dashboard(socketio)
-            app.extensions['realtime_dashboard'] = realtime_service
-            app.logger.info("Socket.IO initialized successfully.")
-        except Exception as e:
-            app.logger.error(f"Socket.IO initialization failed: {e}", exc_info=True)
-    else:
-        app.logger.warning('Flask-SocketIO not installed; realtime dashboard disabled.')
+    # Register Socket.IO handlers
+    _register_socketio_handlers(app)
 
     # Allow both trailing and non-trailing slash routes without redirect
     app.url_map.strict_slashes = False
@@ -222,28 +193,7 @@ def create_app(config_name='default'):
     register_error_handlers(app)
 
     # Initialize database and create analytics views
-    with app.app_context():
-        from .models import init_db, create_analytics_views
-        init_db(app)
-
-        # Create analytics views
-        try:
-            create_analytics_views()
-            app.logger.info("Analytics views created successfully.")
-        except Exception as e:
-            app.logger.error(f"Error creating analytics views: {str(e)}")
-            # Don't crash the app if views can't be created
-            if app.config.get('DEBUG'):
-                raise
-        finally:
-            # Force all connections to be closed – the next request will get a fresh one,
-            # except for in-memory SQLite where disposing loses the schema.
-            engine_url = getattr(db.engine, "url", None)
-            if engine_url and engine_url.drivername == 'sqlite' and engine_url.database in (':memory:', None):
-                app.logger.info("Skipping engine dispose for in-memory SQLite database.")
-            else:
-                db.engine.dispose()
-                app.logger.info("Database engine disposed after startup.")
+    _initialize_database(app)
 
     # Add static file versioning in development
     if app.config.get('DEBUG'):
@@ -254,40 +204,123 @@ def create_app(config_name='default'):
 
     return app
 
+
+def _register_request_hooks(app):
+    """Register before_request and teardown hooks."""
+    
+    @app.before_request
+    def check_db_before_request():
+        try:
+            db.session.execute(text('SELECT 1'))
+            app.logger.debug("Database connection is healthy before request.")
+        except Exception as e:
+            app.logger.error(f"Database connection is BROKEN before request: {e}")
+
+    @app.before_request
+    def log_request_info():
+        """Log details of every request to help trace transaction issues."""
+        app.logger.info(f"Request: {request.method} {request.path} from {request.remote_addr}")
+        if request.method in ['POST', 'PUT', 'DELETE', 'PATCH']:
+            safe_data = {}
+            try:
+                if request.is_json:
+                    safe_data = request.get_json(silent=True) or {}
+                else:
+                    safe_data = request.form.to_dict()
+                
+                # Sanitize sensitive fields
+                sensitive_fields = {'password', 'password_hash', 'token', 'secret', 'api_key', 'credit_card', 'ssn'}
+                for field in sensitive_fields:
+                    if field in safe_data:
+                        safe_data[field] = '[FILTERED]'
+            except Exception as e:
+                safe_data = f"<unable to parse: {e}>"
+            
+            app.logger.info(f"Request data: {safe_data}")
+    
+    @app.before_request
+    def clear_stale_transaction():
+        """Roll back any stale transaction before processing the request."""
+        try:
+            if db.session.is_active:
+                db.session.rollback()
+                app.logger.debug("Rolled back stale transaction")
+        except Exception as e:
+            app.logger.error(f"Failed to roll back stale transaction: {e}")
+        
+        # Debug session contents (only in development)
+        if app.debug and app.config.get('LOG_SESSION_CONTENT'):
+            app.logger.debug(f"Session contents: {dict(session)}")
+    
+    @app.teardown_appcontext
+    def shutdown_session(exception=None):
+        """Automatically clean up the session after each request."""
+        if exception:
+            app.logger.error(f"Teardown called with exception: {exception}")
+        
+        try:
+            if db.session.is_active:
+                db.session.rollback()
+                app.logger.debug("Session rolled back in teardown.")
+        except Exception as e:
+            app.logger.error(f"Rollback failed in teardown: {e}")
+            try:
+                db.session.close()
+            except Exception as close_error:
+                app.logger.critical(f"Failed to close session: {close_error}")
+        finally:
+            db.session.remove()
+
+
+def _register_user_loader(app):
+    """Register Flask-Login user loader."""
+    # Cache the import to avoid repeated imports
+    _user_model = None
+    
+    @login_manager.user_loader
+    def load_user(user_id):
+        """Load user by ID for Flask-Login."""
+        nonlocal _user_model
+        if _user_model is None:
+            from .models.users import User
+            _user_model = User
+        return db.session.get(_user_model, int(user_id))
+
+
+def _register_socketio_handlers(app):
+    """Register Socket.IO handlers if available."""
+    if not _HAS_FLASK_SOCKETIO:
+        return
+        
+    try:
+        from app.services.socketio_handlers import (
+            register_socketio_events,
+            init_realtime_dashboard
+        )
+        register_socketio_events(socketio)
+        realtime_service = init_realtime_dashboard(socketio)
+        app.extensions['realtime_dashboard'] = realtime_service
+        app.logger.info("Socket.IO initialized successfully.")
+    except Exception as e:
+        app.logger.error(f"Socket.IO initialization failed: {e}", exc_info=True)
+
+
+def _initialize_database(app):
+    """Initialize database and create analytics views."""
+    with app.app_context():
+        from .models import init_db, create_analytics_views
+        init_db(app)
+
+        try:
+            create_analytics_views()
+            app.logger.info("Analytics views created successfully.")
+        except Exception as e:
+            app.logger.error(f"Error creating analytics views: {str(e)}")
+            if app.config.get('DEBUG') and app.config.get('RAISE_ON_ANALYTICS_ERROR'):
+                raise
+
+
 def register_blueprints(app):
     """Register Flask blueprints by delegating to the routes package."""
     from app.routes import register_blueprints as register_routes_blueprints
     register_routes_blueprints(app)
-
-
-def register_cli_commands(app):
-    """Register reusable CLI helpers."""
-    from app.models import User
-
-    @app.cli.command('create-admin')
-    @click.option('--username', default='n_mbachia', help='Admin username')
-    @click.option('--email', default='mnventures2024@gmail.com', help='Admin email')
-    @click.option('--password', default='mn_Adm!n@2026', help='Admin password (stored securely)')
-    def create_admin(username, email, password):
-        """Create or update the super-user/vendor account."""
-        with app.app_context():
-            admin = User.query.filter((User.username == username) | (User.email == email)).first()
-            if not admin:
-                admin = User(username=username, email=email, is_admin=True, is_vendor=True, confirmed=True)
-                admin.set_password(password)
-                db.session.add(admin)
-                db.session.commit()
-                click.echo(f'Created admin user {username}')
-                return
-
-            admin.is_admin = True
-            admin.is_vendor = True
-            admin.confirmed = True
-            admin.set_password(password)
-            db.session.commit()
-            click.echo(f'Updated admin user {username} with vendor privileges')
-
-    @app.cli.command('tailwind-build')
-    def tailwind_build():
-        """Compile the Tailwind/PostCSS stylesheet."""
-        ensure_tailwind_built(force=True)

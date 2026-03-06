@@ -3,7 +3,7 @@ Orders API namespace.
 
 This module contains all order-related API endpoints.
 """
-from flask_restx import Namespace, Resource, fields, reqparse, abort
+from flask_restx import Namespace, Resource, fields, reqparse
 from flask import current_app, jsonify, request
 from flask_login import current_user, login_required
 from app.models import Order, OrderItem, Customer, Product, db
@@ -48,6 +48,25 @@ order_not_found = ns.model('Error', {
     'message': fields.String(description='Error message')
 })
 
+
+def _orders_for_current_user():
+    """Return orders scoped to the authenticated user."""
+    return Order.query.filter(Order.user_id == current_user.id)
+
+
+def _get_order_or_404(order_id: int):
+    """Fetch an owned order or return 404."""
+    return _orders_for_current_user().filter(Order.id == order_id).first_or_404()
+
+
+def _get_customer_or_404(customer_id: int):
+    """Fetch an active customer owned by the current user or return 404."""
+    return Customer.query.filter(
+        Customer.id == customer_id,
+        Customer.user_id == current_user.id,
+        Customer.is_active.is_(True)
+    ).first_or_404()
+
 @ns.route('/')
 class OrderList(Resource):
     @ns.doc('list_orders')
@@ -56,7 +75,7 @@ class OrderList(Resource):
     @check_confirmed
     def get(self):
         """List all orders for the current user."""
-        return Order.query.filter_by(user_id=current_user.id).all()
+        return _orders_for_current_user().all()
     
     @ns.doc('create_order')
     @ns.expect(order_parser)
@@ -68,10 +87,11 @@ class OrderList(Resource):
     def post(self):
         """Create a new order."""
         args = order_parser.parse_args()
+        customer = _get_customer_or_404(args['customer_id'])
         
         # Create new order
         order = Order(
-            customer_id=args['customer_id'],
+            customer_id=customer.id,
             user_id=current_user.id,
             status=args['status'],
             notes=args.get('notes')
@@ -93,9 +113,7 @@ class OrderResource(Resource):
     @check_confirmed
     def get(self, order_id):
         """Fetch an order given its identifier."""
-        order = Order.query.get_or_404(order_id)
-        if order.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to access this order')
+        order = _get_order_or_404(order_id)
         return order
     
     @ns.doc('update_order')
@@ -106,13 +124,12 @@ class OrderResource(Resource):
     @check_confirmed
     def put(self, order_id):
         """Update an order."""
-        order = Order.query.get_or_404(order_id)
-        if order.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to update this order')
+        order = _get_order_or_404(order_id)
             
         args = order_parser.parse_args()
+        customer = _get_customer_or_404(args['customer_id'])
         
-        order.customer_id = args['customer_id']
+        order.customer_id = customer.id
         order.status = args['status']
         order.notes = args.get('notes')
         
@@ -125,9 +142,7 @@ class OrderResource(Resource):
     @check_confirmed
     def delete(self, order_id):
         """Delete an order."""
-        order = Order.query.get_or_404(order_id)
-        if order.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to delete this order')
+        order = _get_order_or_404(order_id)
             
         db.session.delete(order)
         db.session.commit()
@@ -163,7 +178,7 @@ class RecentOrders(Resource):
         end_date = _parse_iso_date(params.get('end_date'), 'end_date')
         limit = max(1, min(params.get('limit') or 10, 50))
 
-        query = Order.query.filter(Order.user_id == current_user.id)
+        query = _orders_for_current_user()
         if start_date:
             query = query.filter(Order.order_date >= start_date)
         if end_date:
@@ -193,9 +208,7 @@ class OrderItems(Resource):
     @check_confirmed
     def post(self, order_id):
         """Add an item to an order with inventory validation."""
-        order = Order.query.get_or_404(order_id)
-        if order.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to modify this order')
+        order = _get_order_or_404(order_id)
 
         if order.status in ['completed', 'cancelled']:
             ns.abort(400, f'Cannot add items to a {order.status} order')

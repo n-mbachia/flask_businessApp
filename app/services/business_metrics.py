@@ -8,7 +8,7 @@ This module provides comprehensive business performance metrics and analytics.
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Union
 from sqlalchemy import func, and_, or_
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from app import db
 from app.models import Order, OrderItem, Product
 from app.models.costs import CostEntry, CostTypeEnum
@@ -62,7 +62,12 @@ class BusinessMetrics:
             return {
                 'revenue': revenue_metrics,
                 'expenses': expense_metrics,
-                'profitability': self._get_profitability_metrics(revenue_metrics, expense_metrics),
+                'profitability': self._get_profitability_metrics(
+                    revenue_metrics,
+                    expense_metrics,
+                    start_date,
+                    end_date
+                ),
                 'cash_flow': self._get_cash_flow_metrics(start_date, end_date),
                 'working_capital': self._get_working_capital_metrics(),
                 'metrics_date': metrics_period
@@ -144,9 +149,7 @@ class BusinessMetrics:
 
             results = query.all()
             for row in results:
-                source_key = str(row.order_source or Order.SOURCE_MANUAL).lower()
-                if source_key not in breakdown:
-                    source_key = 'manual'
+                source_key = self._normalize_source_key(row.order_source)
                 breakdown[source_key] = {
                     'revenue': float(row.total_revenue or 0.0),
                     'orders': int(row.order_count or 0),
@@ -166,6 +169,12 @@ class BusinessMetrics:
             'storefront': breakdown['storefront'],
             'combined': combined
         }
+
+    @staticmethod
+    def _normalize_source_key(value: Any) -> str:
+        """Normalize order source values into manual/storefront keys."""
+        key = str(value or Order.SOURCE_MANUAL).strip().lower()
+        return key if key in ('manual', 'storefront') else 'manual'
 
     def _get_expense_metrics(self, start_date, end_date):
         """Calculate expense-related metrics."""
@@ -208,17 +217,25 @@ class BusinessMetrics:
             ]
         }
 
-    def _get_profitability_metrics(self, revenue_metrics, expense_metrics):
+    def _get_profitability_metrics(self, revenue_metrics, expense_metrics, start_date, end_date):
         """Calculate profitability metrics."""
         revenue = revenue_metrics.get('total_revenue', 0)
         total_expenses = expense_metrics.get('total_expenses', 0)
         # Ensure cogs is a float to avoid Decimal type mismatch
         cogs = float(sum(v for k, v in expense_metrics.get('expense_categories', {}).items() 
                         if k in ['variable']))
+
+        overhead_expenses = max(float(total_expenses) - cogs, 0.0)
         
         gross_profit = revenue - cogs
         operating_profit = gross_profit - (total_expenses - cogs)
         net_profit = operating_profit  # Assuming no taxes/interest for now
+
+        source_breakdown = self._get_source_profitability_breakdown(
+            start_date=start_date,
+            end_date=end_date,
+            overhead_expenses=overhead_expenses
+        )
         
         return {
             'gross_profit': float(gross_profit),
@@ -228,8 +245,113 @@ class BusinessMetrics:
             'net_profit': float(net_profit),
             'net_margin': (net_profit / revenue * 100) if revenue > 0 else 0,
             'roi': self._calculate_roi(revenue, total_expenses),
-            'break_even_point': self._calculate_break_even(revenue, total_expenses)
+            'break_even_point': self._calculate_break_even(revenue, total_expenses),
+            'source_breakdown': source_breakdown
         }
+
+    def _get_source_profitability_breakdown(
+        self,
+        start_date: datetime,
+        end_date: datetime,
+        overhead_expenses: float = 0.0
+    ) -> Dict[str, Dict[str, Any]]:
+        """Return profitability metrics split by order source."""
+        source_totals = {
+            'manual': {'revenue': 0.0, 'subtotal': 0.0, 'tax': 0.0, 'orders': 0, 'gross_profit': 0.0},
+            'storefront': {'revenue': 0.0, 'subtotal': 0.0, 'tax': 0.0, 'orders': 0, 'gross_profit': 0.0}
+        }
+
+        try:
+            order_source = func.coalesce(Order.source, Order.SOURCE_MANUAL).label('order_source')
+            revenue_rows = db.session.query(
+                order_source,
+                func.coalesce(func.sum(Order.total_amount), 0).label('total_revenue'),
+                func.coalesce(func.sum(Order.subtotal), 0).label('subtotal_revenue'),
+                func.coalesce(func.sum(Order.tax_amount), 0).label('tax_collected'),
+                func.count(Order.id).label('order_count')
+            ).filter(
+                Order.user_id == self.user_id,
+                Order.status == Order.STATUS_COMPLETED,
+                Order.order_date.between(start_date, end_date)
+            ).group_by(order_source).all()
+
+            for row in revenue_rows:
+                source_key = self._normalize_source_key(row.order_source)
+                source_totals[source_key].update({
+                    'revenue': float(row.total_revenue or 0.0),
+                    'subtotal': float(row.subtotal_revenue or 0.0),
+                    'tax': float(row.tax_collected or 0.0),
+                    'orders': int(row.order_count or 0)
+                })
+
+            gross_rows = db.session.query(
+                order_source,
+                func.coalesce(
+                    func.sum(
+                        OrderItem.subtotal - (OrderItem.quantity * Product.cogs_per_unit)
+                    ),
+                    0
+                ).label('gross_profit')
+            ).join(
+                Order, Order.id == OrderItem.order_id
+            ).join(
+                Product, Product.id == OrderItem.product_id
+            ).filter(
+                Order.user_id == self.user_id,
+                Order.status == Order.STATUS_COMPLETED,
+                Order.order_date.between(start_date, end_date)
+            ).group_by(order_source).all()
+
+            for row in gross_rows:
+                source_key = self._normalize_source_key(row.order_source)
+                source_totals[source_key]['gross_profit'] = float(row.gross_profit or 0.0)
+
+        except Exception as exc:
+            logger.error(f"Failed to calculate source profitability breakdown: {exc}")
+
+        total_revenue = sum(data['revenue'] for data in source_totals.values())
+        normalized_overhead = max(float(overhead_expenses or 0.0), 0.0)
+        breakdown: Dict[str, Dict[str, Any]] = {}
+
+        for source_key, data in source_totals.items():
+            revenue = float(data.get('revenue', 0.0) or 0.0)
+            gross_profit = float(data.get('gross_profit', 0.0) or 0.0)
+            allocated_overhead = (normalized_overhead * (revenue / total_revenue)) if total_revenue > 0 else 0.0
+            net_profit = gross_profit - allocated_overhead
+            orders = int(data.get('orders', 0) or 0)
+
+            breakdown[source_key] = {
+                'revenue': revenue,
+                'subtotal': float(data.get('subtotal', 0.0) or 0.0),
+                'tax': float(data.get('tax', 0.0) or 0.0),
+                'orders': orders,
+                'avg_order_value': (revenue / orders) if orders > 0 else 0.0,
+                'gross_profit': gross_profit,
+                'gross_margin': (gross_profit / revenue * 100) if revenue > 0 else 0.0,
+                'allocated_overhead': allocated_overhead,
+                'net_profit': net_profit,
+                'net_margin': (net_profit / revenue * 100) if revenue > 0 else 0.0
+            }
+
+        combined_revenue = breakdown['manual']['revenue'] + breakdown['storefront']['revenue']
+        combined_orders = breakdown['manual']['orders'] + breakdown['storefront']['orders']
+        combined_gross = breakdown['manual']['gross_profit'] + breakdown['storefront']['gross_profit']
+        combined_net = breakdown['manual']['net_profit'] + breakdown['storefront']['net_profit']
+
+        breakdown['combined'] = {
+            'revenue': combined_revenue,
+            'subtotal': breakdown['manual']['subtotal'] + breakdown['storefront']['subtotal'],
+            'tax': breakdown['manual']['tax'] + breakdown['storefront']['tax'],
+            'orders': combined_orders,
+            'avg_order_value': (combined_revenue / combined_orders) if combined_orders > 0 else 0.0,
+            'gross_profit': combined_gross,
+            'gross_margin': (combined_gross / combined_revenue * 100) if combined_revenue > 0 else 0.0,
+            'allocated_overhead': breakdown['manual']['allocated_overhead'] + breakdown['storefront']['allocated_overhead'],
+            'net_profit': combined_net,
+            'net_margin': (combined_net / combined_revenue * 100) if combined_revenue > 0 else 0.0
+        }
+
+        return breakdown
 
     def _get_cash_flow_metrics(self, start_date, end_date):
         """Calculate cash flow metrics."""

@@ -156,7 +156,10 @@ class CustomerService:
             customer = CustomerService._get_customer_for_user(customer_id, user_id)
             
             # Check if customer has orders
-            order_count = Order.query.filter_by(customer_id=customer_id).count()
+            order_count = Order.query.filter_by(
+                customer_id=customer_id,
+                user_id=user_id
+            ).count()
             if order_count > 0 and not force_delete:
                 raise BusinessLogicError(
                     f"Cannot delete customer with {order_count} existing orders. "
@@ -331,6 +334,7 @@ class CustomerService:
             # Get customer details
             customers = Customer.query.filter(
                 Customer.id.in_(customer_ids),
+                Customer.user_id == user_id,
                 Customer.is_active == True
             ).all()
             
@@ -366,12 +370,19 @@ class CustomerService:
             customer = CustomerService._get_customer_for_user(customer_id, user_id)
             
             # Order statistics
-            orders = Order.query.filter_by(customer_id=customer_id)
+            orders = Order.query.filter_by(
+                customer_id=customer_id,
+                user_id=user_id
+            )
             
             total_orders = orders.count()
             completed_orders = orders.filter(Order.status == Order.STATUS_COMPLETED).count()
             total_spent = db.session.query(func.sum(Order.total_amount))\
-                .filter_by(customer_id=customer_id, status=Order.STATUS_COMPLETED)\
+                .filter_by(
+                    customer_id=customer_id,
+                    user_id=user_id,
+                    status=Order.STATUS_COMPLETED
+                )\
                 .scalar() or Decimal('0')
             
             # Recent activity

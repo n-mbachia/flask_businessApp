@@ -1,11 +1,12 @@
 from flask import (
     Blueprint, render_template, redirect, url_for, 
-    flash, request, jsonify, abort, current_app
+    flash, request, jsonify, current_app
 )
 
 from flask_login import login_required, current_user
 from sqlalchemy import or_, func, text, desc
 from sqlalchemy.exc import InternalError, SQLAlchemyError
+from werkzeug.exceptions import HTTPException
 from datetime import datetime, timezone
 from decimal import Decimal
 import json
@@ -69,6 +70,24 @@ def _customer_context(user_id: int):
     ).order_by(Customer.name).all()
     return recent_customers, active_customers
 
+
+def _orders_for_current_user():
+    """Return an order query scoped to the authenticated user."""
+    return Order.query.filter(Order.user_id == current_user.id)
+
+
+def _customers_for_current_user():
+    """Return a customer query scoped to the authenticated user."""
+    return Customer.query.filter(Customer.user_id == current_user.id)
+
+
+def _get_order_or_404(order_id: int, *options):
+    """Fetch an owned order or return 404 to avoid cross-tenant record leakage."""
+    query = _orders_for_current_user().filter(Order.id == order_id)
+    if options:
+        query = query.options(*options)
+    return query.first_or_404()
+
 @orders_bp.route('/<int:id>/complete', methods=['POST'])
 @login_required
 @check_confirmed
@@ -89,23 +108,7 @@ def complete(id):
                 error_code='INVALID_ID'
             )
         
-        order = Order.query.get_or_404(id)
-        
-        # Check ownership
-        if order.user_id != current_user.id:
-            SecurityUtils.log_security_event('unauthorized_order_completion', {
-                'user_id': current_user.id,
-                'order_id': id,
-                'owner_id': order.user_id,
-                'ip': request.remote_addr
-            }, 'warning')
-            if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return APIResponse.error(
-                    message="Unauthorized access to order",
-                    status_code=403,
-                    error_code='UNAUTHORIZED'
-                )
-            abort(403)
+        order = _get_order_or_404(id)
         
         # Don't allow completing already completed or cancelled orders
         if order.status == Order.STATUS_COMPLETED:
@@ -183,6 +186,8 @@ def complete(id):
             flash(error_msg, 'danger')
             return redirect(url_for('orders.view', id=order.id))
             
+    except HTTPException:
+        raise
     except Exception as e:
         error_msg = f'Unexpected error: {str(e)}'
         current_app.logger.error(
@@ -212,13 +217,14 @@ def index():
     
     # Filters
     status = request.args.get('status')
+    source = request.args.get('source')
     customer_id = request.args.get('customer_id', type=int)
     date_from = request.args.get('date_from')
     date_to = request.args.get('date_to')
     query = request.args.get('q', '')
     
     # Base query - show all non-cancelled orders by default
-    orders_query = Order.query.order_by(Order.order_date.desc())
+    orders_query = _orders_for_current_user().order_by(Order.order_date.desc())
     
     # Apply status filter
     if status:
@@ -226,6 +232,11 @@ def index():
     else:
         # Show all statuses except 'cancelled' by default
         orders_query = orders_query.filter(Order.status != 'cancelled')
+
+    if source in Order.SOURCE_CHOICES:
+        orders_query = orders_query.filter(
+            func.coalesce(Order.source, Order.SOURCE_MANUAL) == source
+        )
     
     if customer_id:
         orders_query = orders_query.filter(Order.customer_id == customer_id)
@@ -263,11 +274,12 @@ def index():
     ).paginate(page=page, per_page=per_page, error_out=False)
     try:
         current_app.logger.info(
-            "Orders index: user_id=%s page=%s per_page=%s status=%s customer_id=%s date_from=%s date_to=%s q='%s' total=%s page_items=%s",
+            "Orders index: user_id=%s page=%s per_page=%s status=%s source=%s customer_id=%s date_from=%s date_to=%s q='%s' total=%s page_items=%s",
             current_user.id,
             page,
             per_page,
             status,
+            source,
             customer_id,
             date_from,
             date_to,
@@ -295,7 +307,7 @@ def index():
         })
     
     # Get customers for filter dropdown
-    customers = Customer.query.filter_by(
+    customers = _customers_for_current_user().filter_by(
         is_active=True
     ).order_by(Customer.name).all()
 
@@ -364,6 +376,7 @@ def index():
         status_choices=Order.STATUS_CHOICES,
         query=query,
         status=status,
+        source=source,
         customer_id=customer_id,
         date_from=date_from,
         date_to=date_to
@@ -572,7 +585,13 @@ def create():
                 }
 
                 if form.customer_id.data and form.customer_id.data > 0:
-                    order_data['customer_id'] = form.customer_id.data
+                    selected_customer = _customers_for_current_user().filter(
+                        Customer.id == form.customer_id.data,
+                        Customer.is_active.is_(True)
+                    ).first()
+                    if not selected_customer:
+                        raise ValueError("Selected customer is invalid for this account.")
+                    order_data['customer_id'] = selected_customer.id
                 else:
                     guest_customer = Customer.query.filter_by(
                         user_id=current_user.id,
@@ -738,9 +757,10 @@ def create():
             rollback_db_session()
             error_msg = f'An error occurred while creating the order: {str(e)}'
             current_app.logger.error(error_msg, exc_info=True)
+            status_code = 400 if isinstance(e, ValueError) else 500
 
             if is_ajax:
-                return jsonify({'success': False, 'message': error_msg}), 500
+                return jsonify({'success': False, 'message': error_msg}), status_code
 
             products = _fetch_active_products(current_user.id)
             flash(error_msg, 'danger')
@@ -804,21 +824,11 @@ def create():
 @check_confirmed
 def view(id):
     """View order details."""
-    order = Order.query.options(
+    order = _get_order_or_404(
+        id,
         db.joinedload(Order.customer),
         db.joinedload(Order.items).joinedload(OrderItem.product)
-    ).get_or_404(id)
-    
-    # Ensure the order belongs to the current user
-    if order.user_id != current_user.id:
-        current_app.logger.warning(
-            "Unauthorized order view attempt: user_id=%s id=%s owner_id=%s",
-            current_user.id,
-            id,
-            order.user_id
-        )
-        flash(f'You do not have permission to view order {order.order_number}. This order belongs to another user.', 'danger')
-        return redirect(url_for('orders.index'))
+    )
     
     try:
         current_app.logger.info(
@@ -838,18 +848,13 @@ def edit(id):
     try:
         current_app.logger.info(f"Edit order {id} requested by user {current_user.id}")
 
-        order = Order.query.options(
+        order = _get_order_or_404(
+            id,
             db.joinedload(Order.items),
             db.joinedload(Order.customer)
-        ).get_or_404(id)
+        )
 
         current_app.logger.info(f"Order found: {order.order_number}, status: {order.status}, user_id: {order.user_id}")
-
-        # Ensure ownership
-        if order.user_id != current_user.id:
-            current_app.logger.warning(f"Ownership mismatch: order.user_id={order.user_id}, current_user.id={current_user.id}")
-            flash(f'You do not have permission to access order {order.order_number}. This order belongs to another user.', 'danger')
-            return redirect(url_for('orders.index'))
 
         # Get all active products for choices
         products = Product.query.filter_by(
@@ -950,20 +955,7 @@ def edit(id):
 @check_confirmed
 def cancel(id):
     """Cancel an order and return items to inventory."""
-    order = Order.query.get_or_404(id)
-    
-    # Check if the order belongs to the current user
-    if order.user_id != current_user.id:
-        try:
-            current_app.logger.warning(
-                "Unauthorized order cancel attempt: user_id=%s id=%s owner_id=%s",
-                current_user.id,
-                id,
-                order.user_id
-            )
-        except Exception:
-            pass
-        abort(403)
+    order = _get_order_or_404(id)
     
     # Don't allow cancelling already completed or cancelled orders
     if order.status in [Order.STATUS_COMPLETED, Order.STATUS_CANCELLED]:
@@ -1301,9 +1293,7 @@ def export():
 @check_confirmed
 def delete_order(id):
     """Delete an order (cascades to items)."""
-    order = Order.query.get_or_404(id)
-    if order.user_id != current_user.id:
-        abort(403)
+    order = _get_order_or_404(id)
     db.session.delete(order)
     db.session.commit()
     flash('Order deleted successfully.', 'success')

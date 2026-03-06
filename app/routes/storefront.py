@@ -1,14 +1,16 @@
 import json
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal, InvalidOperation
 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, abort, jsonify, current_app
 from flask_login import login_required, current_user
+from sqlalchemy.orm import joinedload
 from app import db
 from app.models import Product, InventoryMovement, User, Order, OrderItem, Customer
 from app.forms.product_forms import ProductForm
 from app.forms.storefront_forms import VendorInviteForm
 from app.services.dashboard_metrics import DashboardMetrics
+from app.services.business_metrics import BusinessMetrics
 from app.services.inventory_service import InventoryService
 from app.utils.decorators import handle_exceptions, rate_limit
 from app.utils import csrf_exempt
@@ -65,8 +67,20 @@ def catalog():
         per_page=per_page,
         error_out=False
     )
+    storefront_tax_rate = _coerce_decimal(
+        current_app.config.get('SALES_TAX_RATE', 0.16),
+        Decimal('0.16')
+    )
+    if storefront_tax_rate < 0:
+        storefront_tax_rate = Decimal('0.00')
     flash_sale = _build_flash_sale_offer(products.items)
-    return render_template('storefront/catalog.html', products=products, flash_sale=flash_sale)
+    return render_template(
+        'storefront/catalog.html',
+        products=products,
+        flash_sale=flash_sale,
+        storefront_tax_rate_decimal=float(storefront_tax_rate),
+        storefront_tax_rate_percent=float(storefront_tax_rate * Decimal('100'))
+    )
 
 
 def _build_flash_sale_offer(items):
@@ -200,13 +214,17 @@ def storefront_checkout():
     if total_amount < 0:
         total_amount = Decimal('0.00')
 
-    requested_status = payload.get('status') or Order.STATUS_PROCESSING
-    if requested_status not in dict(Order.STATUS_CHOICES):
-        requested_status = Order.STATUS_PROCESSING
-
     payment_status = payload.get('payment_status') or Order.PAYMENT_PAID
     if payment_status not in dict(Order.PAYMENT_STATUS_CHOICES):
         payment_status = Order.PAYMENT_PAID
+
+    requested_status = payload.get('status')
+    if requested_status not in dict(Order.STATUS_CHOICES):
+        requested_status = (
+            Order.STATUS_COMPLETED
+            if payment_status == Order.PAYMENT_PAID
+            else Order.STATUS_PROCESSING
+        )
 
     payment_method = sanitize_input(payload.get('payment_method') or 'storefront', 'text')
     notes = sanitize_input(payload.get('notes', ''), 'text')
@@ -286,6 +304,49 @@ def vendor_portal():
     _ensure_vendor()
     form = ProductForm()
     pending_products = Product.query.filter_by(user_id=current_user.id).order_by(Product.created_at.desc()).all()
+    analytics_end = datetime.utcnow()
+    analytics_start = analytics_end - timedelta(days=30)
+    storefront_metrics = {
+        'window_days': 30,
+        'revenue': 0.0,
+        'orders': 0,
+        'avg_order_value': 0.0,
+        'tax_collected': 0.0,
+        'gross_profit': 0.0,
+        'gross_margin': 0.0,
+        'net_profit': 0.0,
+        'net_margin': 0.0
+    }
+
+    try:
+        financial_health = BusinessMetrics(user_id=current_user.id).get_financial_health(
+            start_date=analytics_start,
+            end_date=analytics_end
+        )
+        source_revenue = ((financial_health.get('revenue') or {}).get('source_breakdown') or {}).get('storefront', {})
+        source_profitability = ((financial_health.get('profitability') or {}).get('source_breakdown') or {}).get('storefront', {})
+
+        storefront_metrics.update({
+            'revenue': float(source_revenue.get('revenue', 0.0) or 0.0),
+            'orders': int(source_revenue.get('orders', 0) or 0),
+            'avg_order_value': float(source_profitability.get('avg_order_value', 0.0) or 0.0),
+            'tax_collected': float(source_profitability.get('tax', 0.0) or 0.0),
+            'gross_profit': float(source_profitability.get('gross_profit', 0.0) or 0.0),
+            'gross_margin': float(source_profitability.get('gross_margin', 0.0) or 0.0),
+            'net_profit': float(source_profitability.get('net_profit', 0.0) or 0.0),
+            'net_margin': float(source_profitability.get('net_margin', 0.0) or 0.0)
+        })
+    except Exception as exc:
+        logger.warning("Unable to load storefront metrics for vendor %s: %s", current_user.id, exc)
+
+    recent_storefront_orders = Order.query.options(
+        joinedload(Order.customer)
+    ).filter(
+        Order.user_id == current_user.id,
+        db.func.coalesce(Order.source, Order.SOURCE_MANUAL) == Order.SOURCE_STOREFRONT
+    ).order_by(
+        Order.order_date.desc()
+    ).limit(8).all()
 
     if form.validate_on_submit():
         try:
@@ -366,7 +427,13 @@ def vendor_portal():
             db.session.rollback()
             flash('Failed to save product. Contact support if the issue persists.', 'danger')
 
-    return render_template('storefront/vendor_portal.html', form=form, products=pending_products)
+    return render_template(
+        'storefront/vendor_portal.html',
+        form=form,
+        products=pending_products,
+        storefront_metrics=storefront_metrics,
+        recent_storefront_orders=recent_storefront_orders
+    )
 
 
 @storefront_bp.route('/storefront/admin/vendors', methods=['GET', 'POST'])

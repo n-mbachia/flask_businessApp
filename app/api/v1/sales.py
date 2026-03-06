@@ -1,96 +1,140 @@
-"""
-Sales API endpoints.
+"""Sales API endpoints for monthly sales snapshots."""
 
-This module contains all sales-related API endpoints.
-"""
-from flask_restx import Namespace, Resource, fields
+from datetime import datetime
+
 from flask import request
-from flask_login import login_required, current_user
+from flask_login import current_user, login_required
+from flask_restx import Namespace, Resource, fields
 
-# Create namespace
+from app import db
+from app.models import Product, Sales
+
 ns = Namespace('sales', description='Sales operations')
 
-# Response models
-sale_item_model = ns.model('SaleItem', {
-    'id': fields.Integer(description='Sale item ID'),
+sale_model = ns.model('SalesSnapshot', {
+    'id': fields.Integer(description='Snapshot ID'),
     'product_id': fields.Integer(description='Product ID'),
-    'quantity': fields.Integer(description='Quantity sold'),
-    'unit_price': fields.Float(description='Price per unit'),
-    'total_price': fields.Float(description='Total price')
+    'product_name': fields.String(description='Product name'),
+    'month': fields.String(description='Month in YYYY-MM format'),
+    'units_sold': fields.Integer(description='Units sold in month'),
+    'total_revenue': fields.Float(description='Total revenue for this snapshot'),
+    'customer_count': fields.Integer(description='Number of customers represented'),
+    'created_at': fields.DateTime(description='Created at timestamp'),
+    'updated_at': fields.DateTime(description='Updated at timestamp')
 })
 
-sale_model = ns.model('Sale', {
-    'id': fields.Integer(description='Sale ID'),
-    'sale_date': fields.DateTime(description='Date of sale'),
-    'total_amount': fields.Float(description='Total sale amount'),
-    'customer_id': fields.Integer(description='Customer ID'),
-    'user_id': fields.Integer(description='User who made the sale'),
-    'items': fields.List(fields.Nested(sale_item_model), description='Sale items')
+create_sale_model = ns.model('CreateSalesSnapshot', {
+    'product_id': fields.Integer(required=True, description='Product ID'),
+    'month': fields.String(required=True, description='Month in YYYY-MM format'),
+    'units_sold': fields.Integer(required=True, description='Units sold'),
+    'customer_count': fields.Integer(required=False, description='Optional customer count')
 })
+
+
+def _serialize_sale(sale: Sales):
+    return {
+        'id': sale.id,
+        'product_id': sale.product_id,
+        'product_name': sale.product.name if sale.product else '',
+        'month': sale.month,
+        'units_sold': int(sale.units_sold or 0),
+        'total_revenue': float(sale.total_revenue or 0),
+        'customer_count': int(sale.customer_count or 0),
+        'created_at': sale.created_at,
+        'updated_at': sale.updated_at
+    }
+
 
 @ns.route('/')
 class SaleList(Resource):
+    @login_required
     @ns.marshal_list_with(sale_model)
-    @login_required
     def get(self):
-        """Get all sales."""
-        from app.models import Sale
-        return Sale.query.filter_by(user_id=current_user.id).all()
-    
-    @ns.expect(sale_model)
-    @ns.marshal_with(sale_model, code=201)
-    @login_required
-    def post(self):
-        """Create a new sale."""
-        from app.models import Sale, SaleItem, db
-        
-        data = request.get_json()
-        sale = Sale(
-            customer_id=data['customer_id'],
-            user_id=current_user.id,
-            total_amount=data['total_amount']
+        """Get sales snapshots for the authenticated user."""
+        month = request.args.get('month', '').strip()
+        product_id = request.args.get('product_id', type=int)
+        page = max(1, request.args.get('page', 1, type=int))
+        per_page = max(1, min(request.args.get('per_page', 50, type=int), 200))
+
+        query = Sales.query.filter_by(user_id=current_user.id)
+
+        if month:
+            query = query.filter(Sales.month == month)
+
+        if product_id:
+            query = query.filter(Sales.product_id == product_id)
+
+        pagination = query.order_by(Sales.month.desc(), Sales.id.desc()).paginate(
+            page=page,
+            per_page=per_page,
+            error_out=False
         )
-        
-        db.session.add(sale)
-        db.session.flush()  # To get the sale ID
-        
-        # Add sale items
-        for item_data in data.get('items', []):
-            item = SaleItem(
-                sale_id=sale.id,
-                product_id=item_data['product_id'],
-                quantity=item_data['quantity'],
-                unit_price=item_data['unit_price']
-            )
-            db.session.add(item)
-        
+
+        return [_serialize_sale(sale) for sale in pagination.items]
+
+    @login_required
+    @ns.expect(create_sale_model)
+    @ns.marshal_with(sale_model, code=201)
+    def post(self):
+        """Create a new monthly sales snapshot."""
+        data = request.get_json(silent=True) or {}
+
+        product_id = data.get('product_id')
+        month = (data.get('month') or '').strip()
+        units_sold = int(data.get('units_sold') or 0)
+        customer_count = int(data.get('customer_count') or 0)
+
+        if not product_id or not month:
+            ns.abort(400, 'product_id and month are required')
+
+        try:
+            datetime.strptime(month, '%Y-%m')
+        except ValueError:
+            ns.abort(400, 'month must be in YYYY-MM format')
+
+        if units_sold <= 0:
+            ns.abort(400, 'units_sold must be greater than zero')
+
+        product = Product.query.filter_by(id=product_id, user_id=current_user.id).first()
+        if not product:
+            ns.abort(404, 'Product not found')
+
+        snapshot = Sales(
+            product_id=product.id,
+            user_id=current_user.id,
+            month=month,
+            units_sold=units_sold,
+            total_revenue=round(float(product.selling_price_per_unit or 0) * units_sold, 2),
+            customer_count=max(customer_count, 0)
+        )
+
+        db.session.add(snapshot)
         db.session.commit()
-        return sale, 201
+
+        return _serialize_sale(snapshot), 201
+
 
 @ns.route('/<int:sale_id>')
-@ns.param('sale_id', 'The sale identifier')
-@ns.response(404, 'Sale not found')
+@ns.param('sale_id', 'The sales snapshot identifier')
+@ns.response(404, 'Snapshot not found')
 class SaleResource(Resource):
+    @login_required
     @ns.marshal_with(sale_model)
-    @login_required
     def get(self, sale_id):
-        """Get a specific sale."""
-        from app.models import Sale
-        sale = Sale.query.get_or_404(sale_id)
+        """Get a specific sales snapshot."""
+        sale = Sales.query.get_or_404(sale_id)
         if sale.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to view this sale')
-        return sale
-    
-    @ns.response(204, 'Sale deleted')
+            ns.abort(403, 'You do not have permission to view this snapshot')
+        return _serialize_sale(sale)
+
     @login_required
+    @ns.response(204, 'Snapshot deleted')
     def delete(self, sale_id):
-        """Delete a sale."""
-        from app.models import Sale, db
-        
-        sale = Sale.query.get_or_404(sale_id)
+        """Delete a specific sales snapshot."""
+        sale = Sales.query.get_or_404(sale_id)
         if sale.user_id != current_user.id:
-            ns.abort(403, 'You do not have permission to delete this sale')
-            
+            ns.abort(403, 'You do not have permission to delete this snapshot')
+
         db.session.delete(sale)
         db.session.commit()
         return '', 204

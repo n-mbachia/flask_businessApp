@@ -1,190 +1,199 @@
 <!-- Navigation Bar -->
-<nav class="bg-gray-900 text-white" aria-label="Main navigation" role="navigation" x-data="{ mobileMenuOpen: false }">
+<nav class="sticky top-0 z-40 border-b border-gray-800 bg-gray-900/95 text-white backdrop-blur"
+     aria-label="Main navigation"
+     role="navigation"
+     x-data="{ mobileMenuOpen: false }">
     {% set current_endpoint = request.endpoint or '' %}
+    {% set is_authenticated = current_user.is_authenticated %}
+    {% set is_admin = is_authenticated and current_user.is_admin %}
+    {% set is_vendor = is_authenticated and current_user.is_vendor %}
+    {% set home_url = url_for('main.dashboard') if is_authenticated else url_for('main.index') %}
+    {% set role_label = 'Admin' if is_admin else 'Vendor' if is_vendor else 'Member' %}
 
-    {# Define all possible navigation links (only shown when authenticated) #}
-    {% set nav_links = [
-        {
-            'label': 'Dashboard',
-            'endpoint': 'main.dashboard',
-            'icon': 'fas fa-chart-pie',
-            'active_prefixes': ['main.dashboard']
-        },
-        {
-            'label': 'Analytics',
-            'endpoint': 'analytics.analytics',
-            'icon': 'fas fa-chart-line',
-            'active_prefixes': ['analytics.']
-        },
-        {
-            'label': 'Products',
-            'endpoint': 'products.manage_products',
-            'icon': 'fas fa-boxes',
-            'active_prefixes': [
-                'products.manage_products',
-                'products.edit_product',
-                'products.create_lot',
-                'products.adjust_stock',
-                'products.product_analytics_dashboard',
-                'products.product_analytics_legacy',
-                'products.search_products'
-            ]
-        },
-        {
-            'label': 'Inventory',
-            'endpoint': 'products.inventory_dashboard',
-            'icon': 'fas fa-warehouse',
-            'active_prefixes': ['products.inventory_dashboard']
-        },
-        {
-            'label': 'Sales',
-            'endpoint': 'sales.manage_sales',
-            'icon': 'fas fa-coins',
-            'active_prefixes': ['sales.']
-        },
-        {
-            'label': 'Orders',
-            'endpoint': 'orders.index',
-            'icon': 'fas fa-receipt',
-            'active_prefixes': ['orders.']
-        },
-        {
-            'label': 'Costs',
-            'endpoint': 'costs.manage_costs',
-            'icon': 'fas fa-file-invoice-dollar',
-            'active_prefixes': ['costs.']
-        },
-        {
-            'label': 'Customers',
-            'endpoint': 'customer.index',
-            'icon': 'fas fa-users',
-            'active_prefixes': ['customer.']
-        }
-    ] %}
+    {% set nav_links = [] %}
+    {% if is_authenticated %}
+        {% set nav_links = nav_links + [
+            {
+                'label': 'Dashboard',
+                'endpoint': 'main.dashboard',
+                'icon': 'fas fa-chart-pie',
+                'active_prefixes': ['main.dashboard']
+            },
+            {
+                'label': 'Analytics',
+                'endpoint': 'analytics.analytics',
+                'icon': 'fas fa-chart-line',
+                'active_prefixes': ['analytics.']
+            },
+            {
+                'label': 'Products',
+                'endpoint': 'products.manage_products',
+                'icon': 'fas fa-boxes',
+                'active_prefixes': ['products.']
+            },
+            {
+                'label': 'Orders',
+                'endpoint': 'orders.index',
+                'icon': 'fas fa-receipt',
+                'active_prefixes': ['orders.']
+            },
+            {
+                'label': 'Customers',
+                'endpoint': 'customer.index',
+                'icon': 'fas fa-users',
+                'active_prefixes': ['customer.']
+            }
+        ] %}
+        {% if is_vendor or is_admin %}
+            {% set nav_links = nav_links + [
+                {
+                    'label': 'Vendor Portal',
+                    'endpoint': 'storefront.vendor_portal',
+                    'icon': 'fas fa-store',
+                    'active_prefixes': ['storefront.vendor_portal']
+                }
+            ] %}
+        {% endif %}
+        {% if is_admin %}
+            {% set nav_links = nav_links + [
+                {
+                    'label': 'Pending Approvals',
+                    'endpoint': 'storefront.pending_products',
+                    'icon': 'fas fa-clipboard-check',
+                    'active_prefixes': ['storefront.pending_products', 'storefront.approve_product']
+                },
+                {
+                    'label': 'Manage Vendors',
+                    'endpoint': 'storefront.manage_vendors',
+                    'icon': 'fas fa-user-shield',
+                    'active_prefixes': ['storefront.manage_vendors']
+                }
+            ] %}
+        {% endif %}
+    {% endif %}
 
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-center justify-between h-16">
-            <!-- Logo and desktop navigation -->
-            <div class="flex items-center space-x-6">
-                <a href="{{ url_for('main.dashboard') if current_user.is_authenticated else url_for('storefront.catalog') }}"
+    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div class="flex h-16 items-center justify-between">
+            <div class="flex items-center gap-4 lg:gap-8">
+                <a href="{{ home_url }}"
                    aria-label="Profitability App home"
                    class="flex items-center gap-3">
-                    <img src="{{ url_for('static', filename='img/logo.svg') }}" alt="Profitability App logo" class="h-10 w-auto">
-                    <span class="text-lg font-semibold tracking-wide text-white">Profitability App</span>
+                    <img src="{{ url_for('static', filename='img/logo.svg') }}"
+                         alt="Profitability App logo"
+                         class="h-10 w-auto">
+                    <span class="hidden text-lg font-semibold tracking-wide text-white sm:inline">Profitability App</span>
                 </a>
 
-                {% if current_user.is_authenticated %}
-                <div class="hidden lg:flex">
-                    <ul class="flex items-center space-x-1">
+                {% if is_authenticated %}
+                    <ul class="hidden xl:flex items-center gap-1">
                         {% for link in nav_links %}
-                            {# Use namespace to correctly set active state across loops #}
                             {% set ns = namespace(is_active=(current_endpoint == link.endpoint)) %}
                             {% for prefix in link.active_prefixes %}
                                 {% if not ns.is_active and prefix and current_endpoint.startswith(prefix) %}
                                     {% set ns.is_active = true %}
                                 {% endif %}
                             {% endfor %}
-                            {% set is_active = ns.is_active %}
-
-                            {% set link_classes = 'inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold transition ' %}
-                            {% if is_active %}
-                                {% set link_classes = link_classes + 'bg-white text-gray-900 shadow' %}
+                            {% set link_classes = 'inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold transition ' %}
+                            {% if ns.is_active %}
+                                {% set link_classes = link_classes + 'bg-white text-gray-900 shadow-sm' %}
                             {% else %}
-                                {% set link_classes = link_classes + 'text-gray-300 hover:text-white hover:bg-gray-800' %}
+                                {% set link_classes = link_classes + 'text-gray-300 hover:bg-gray-800 hover:text-white' %}
                             {% endif %}
                             <li>
-                                <a href="{{ url_for(link.endpoint) }}" class="{{ link_classes }}" {% if is_active %}aria-current="page"{% endif %}>
+                                <a href="{{ url_for(link.endpoint) }}"
+                                   class="{{ link_classes }}"
+                                   {% if ns.is_active %}aria-current="page"{% endif %}>
                                     <i class="{{ link.icon }} text-base" aria-hidden="true"></i>
                                     <span>{{ link.label }}</span>
                                 </a>
                             </li>
                         {% endfor %}
                     </ul>
-                </div>
                 {% endif %}
             </div>
 
-            <!-- Right side: Shop button, user menu, and mobile toggle -->
-            <div class="flex items-center gap-3">
-                <!-- Shop link (visible to all) -->
+            <div class="flex items-center gap-2">
                 <a href="{{ url_for('storefront.catalog') }}"
-                   class="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-md bg-white text-gray-900 font-semibold text-sm hover:bg-gray-100">
+                   class="hidden md:inline-flex items-center gap-2 rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 hover:bg-gray-100">
                     <i class="fas fa-store text-base" aria-hidden="true"></i>
                     <span>Shop</span>
                 </a>
 
-                {% if current_user.is_authenticated %}
-                    <!-- User dropdown (desktop) -->
-                    <div class="hidden lg:block relative" x-data="{ open: false }">
+                {% if is_authenticated %}
+                    <div class="relative hidden md:block" x-data="{ open: false }">
                         <button @click="open = !open"
                                 type="button"
-                                class="inline-flex items-center gap-2 px-3 py-2 rounded-md text-sm font-semibold text-gray-200 bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                class="inline-flex items-center gap-2 rounded-md bg-gray-800 px-3 py-2 text-sm font-semibold text-gray-200 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                                 aria-expanded="false"
                                 :aria-expanded="open.toString()">
                             <i class="fas fa-user-circle text-lg" aria-hidden="true"></i>
                             <span>{{ current_user.username }}</span>
+                            <span class="rounded-full border border-gray-600 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-gray-300">
+                                {{ role_label }}
+                            </span>
                             <i class="fas fa-chevron-down text-xs" aria-hidden="true"></i>
                         </button>
                         <div x-show="open"
                              @click.away="open = false"
                              x-cloak
-                             class="absolute right-0 mt-2 w-48 bg-white text-gray-900 rounded-md shadow-lg ring-1 ring-black ring-opacity-5 z-50">
+                             class="absolute right-0 z-50 mt-2 w-56 rounded-md bg-white text-gray-900 shadow-lg ring-1 ring-black ring-opacity-5">
                             <a href="{{ url_for('auth.profile') }}"
-                               class="block px-4 py-2 text-sm hover:bg-gray-100 focus:outline-none focus:bg-gray-100">Profile</a>
+                               class="block px-4 py-2 text-sm hover:bg-gray-100">Profile</a>
+                            {% if is_vendor or is_admin %}
+                                <a href="{{ url_for('storefront.vendor_portal') }}"
+                                   class="block px-4 py-2 text-sm hover:bg-gray-100">Vendor Portal</a>
+                            {% endif %}
+                            {% if is_admin %}
+                                <a href="{{ url_for('storefront.pending_products') }}"
+                                   class="block px-4 py-2 text-sm hover:bg-gray-100">Pending Approvals</a>
+                                <a href="{{ url_for('storefront.manage_vendors') }}"
+                                   class="block px-4 py-2 text-sm hover:bg-gray-100">Manage Vendors</a>
+                            {% endif %}
+                            <div class="border-t border-gray-100"></div>
                             <a href="{{ url_for('auth.logout') }}"
-                               class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100 focus:outline-none focus:bg-gray-100">Logout</a>
+                               class="block px-4 py-2 text-sm text-red-600 hover:bg-gray-100">Logout</a>
                         </div>
                     </div>
                 {% else %}
-                    <!-- Login / Sign Up (desktop) -->
-                    <div class="hidden lg:flex items-center gap-2">
+                    <div class="hidden items-center gap-2 md:flex">
                         <a href="{{ url_for('auth.login') }}"
-                           class="px-3 py-2 text-sm font-semibold text-gray-300 hover:text-white hover:bg-gray-800 rounded-md">Login</a>
+                           class="rounded-md px-3 py-2 text-sm font-semibold text-gray-300 hover:bg-gray-800 hover:text-white">Login</a>
                         <a href="{{ url_for('auth.register') }}"
-                           class="px-3 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md">Sign Up</a>
+                           class="rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500">Sign Up</a>
                     </div>
                 {% endif %}
 
-                <!-- Mobile menu button -->
-                <div class="flex lg:hidden">
-                    <button @click="mobileMenuOpen = !mobileMenuOpen"
-                            type="button"
-                            class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                            aria-expanded="false"
-                            :aria-expanded="mobileMenuOpen.toString()"
-                            aria-controls="mobile-menu">
-                        <span class="sr-only">Toggle mobile menu</span>
-                        <svg x-show="!mobileMenuOpen" class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                        <svg x-show="mobileMenuOpen" class="block h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                    </button>
-                </div>
+                <button @click="mobileMenuOpen = !mobileMenuOpen"
+                        type="button"
+                        class="inline-flex items-center justify-center rounded-md p-2 text-gray-300 hover:bg-gray-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 md:hidden"
+                        aria-expanded="false"
+                        :aria-expanded="mobileMenuOpen.toString()"
+                        aria-controls="mobile-menu">
+                    <span class="sr-only">Toggle mobile menu</span>
+                    <svg x-show="!mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg x-show="mobileMenuOpen" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Mobile menu dropdown -->
-    <div x-show="mobileMenuOpen"
-         x-cloak
-         class="lg:hidden"
-         id="mobile-menu">
-        <div class="px-2 pt-2 pb-3 space-y-1">
-            {% if current_user.is_authenticated %}
+    <div x-show="mobileMenuOpen" x-cloak class="border-t border-gray-800 md:hidden" id="mobile-menu">
+        <div class="space-y-1 px-2 pb-3 pt-2">
+            {% if is_authenticated %}
                 {% for link in nav_links %}
-                    {# Same active‑state logic as desktop #}
                     {% set ns = namespace(is_active=(current_endpoint == link.endpoint)) %}
                     {% for prefix in link.active_prefixes %}
                         {% if not ns.is_active and prefix and current_endpoint.startswith(prefix) %}
                             {% set ns.is_active = true %}
                         {% endif %}
                     {% endfor %}
-                    {% set is_active = ns.is_active %}
                     <a href="{{ url_for(link.endpoint) }}"
-                       class="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-semibold transition {{ 'bg-gray-800 text-white' if is_active else 'text-gray-300 hover:text-white hover:bg-gray-700' }}"
-                       {% if is_active %}aria-current="page"{% endif %}
+                       class="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-semibold transition {{ 'bg-gray-800 text-white' if ns.is_active else 'text-gray-300 hover:bg-gray-800 hover:text-white' }}"
+                       {% if ns.is_active %}aria-current="page"{% endif %}
                        @click="mobileMenuOpen = false">
                         <i class="{{ link.icon }} text-base" aria-hidden="true"></i>
                         <span>{{ link.label }}</span>
@@ -193,38 +202,34 @@
             {% endif %}
 
             <div class="border-t border-gray-800 pt-3">
-                <!-- Shop link (mobile) -->
                 <a href="{{ url_for('storefront.catalog') }}"
-                   class="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800 rounded-md"
+                   class="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-white hover:bg-gray-800"
                    @click="mobileMenuOpen = false">
                     <i class="fas fa-store" aria-hidden="true"></i>
                     <span>Shop</span>
                 </a>
-
-                {% if current_user.is_authenticated %}
-                    <!-- Profile & Logout (mobile) -->
+                {% if is_authenticated %}
                     <a href="{{ url_for('auth.profile') }}"
-                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-gray-200 hover:text-white hover:bg-gray-800 rounded-md"
+                       class="mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-800 hover:text-white"
                        @click="mobileMenuOpen = false">
                         <i class="fas fa-user" aria-hidden="true"></i>
                         <span>Profile</span>
                     </a>
                     <a href="{{ url_for('auth.logout') }}"
-                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-red-400 hover:text-red-200 hover:bg-gray-800 rounded-md"
+                       class="mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-red-400 hover:bg-gray-800 hover:text-red-200"
                        @click="mobileMenuOpen = false">
                         <i class="fas fa-sign-out-alt" aria-hidden="true"></i>
                         <span>Logout</span>
                     </a>
                 {% else %}
-                    <!-- Login / Sign Up (mobile) -->
                     <a href="{{ url_for('auth.login') }}"
-                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-gray-200 hover:text-white hover:bg-gray-800 rounded-md"
+                       class="mt-1 flex items-center gap-2 rounded-md px-3 py-2 text-sm font-semibold text-gray-200 hover:bg-gray-800 hover:text-white"
                        @click="mobileMenuOpen = false">
                         <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
                         <span>Login</span>
                     </a>
                     <a href="{{ url_for('auth.register') }}"
-                       class="flex items-center gap-2 px-3 py-2 mt-1 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-500 rounded-md"
+                       class="mt-1 flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-sm font-semibold text-white hover:bg-blue-500"
                        @click="mobileMenuOpen = false">
                         <i class="fas fa-user-plus" aria-hidden="true"></i>
                         <span>Sign Up</span>
