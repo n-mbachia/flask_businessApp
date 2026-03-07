@@ -295,17 +295,19 @@ def storefront_checkout():
         }), 500
 
 
-@storefront_bp.route('/storefront/vendor', methods=['GET', 'POST'])
+@storefront_bp.route('/storefront/vendor', methods=['GET'])
 @handle_exceptions
 @rate_limit(max_calls=30, period=60)
 @login_required
 def vendor_portal():
-    """Vendor portal for uploading products."""
+    """Vendor portal dashboard showing performance metrics and recent orders."""
     _ensure_vendor()
-    form = ProductForm()
-    pending_products = Product.query.filter_by(user_id=current_user.id).order_by(Product.created_at.desc()).all()
+
+    # Date range for metrics (last 30 days)
     analytics_end = datetime.utcnow()
     analytics_start = analytics_end - timedelta(days=30)
+
+    # Default metrics structure
     storefront_metrics = {
         'window_days': 30,
         'revenue': 0.0,
@@ -318,6 +320,7 @@ def vendor_portal():
         'net_margin': 0.0
     }
 
+    # Fetch financial health metrics
     try:
         financial_health = BusinessMetrics(user_id=current_user.id).get_financial_health(
             start_date=analytics_start,
@@ -338,7 +341,8 @@ def vendor_portal():
         })
     except Exception as exc:
         logger.warning("Unable to load storefront metrics for vendor %s: %s", current_user.id, exc)
-
+       
+    # Recent storefront orders (latest 8)
     recent_storefront_orders = Order.query.options(
         joinedload(Order.customer)
     ).filter(
@@ -348,93 +352,11 @@ def vendor_portal():
         Order.order_date.desc()
     ).limit(8).all()
 
-    if form.validate_on_submit():
-        try:
-            payload = _build_product_payload(form)
-            validated_data, errors = validate_entity('product', payload, sanitize=False)
-            if errors:
-                for error in errors:
-                    flash(str(error), 'danger')
-                return redirect(url_for('storefront.vendor_portal'))
-
-            product = Product(
-                user_id=current_user.id,
-                name=validated_data.name,
-                description=validated_data.description,
-                category=validated_data.category,
-                cogs_per_unit=validated_data.cost_price,
-                selling_price_per_unit=validated_data.price,
-                reorder_level=validated_data.reorder_point,
-                is_active=False,
-                is_approved=False
-            )
-
-            if validated_data.sku:
-                if Product.query.filter_by(sku=validated_data.sku, user_id=current_user.id).first():
-                    flash('SKU already exists for your account', 'danger')
-                    return redirect(url_for('storefront.vendor_portal'))
-                product.sku = validated_data.sku.strip()
-            else:
-                product.sku = generate_sku(validated_data.name, current_user.id)
-
-            if validated_data.barcode:
-                if Product.query.filter_by(barcode=validated_data.barcode, user_id=current_user.id).first():
-                    flash('Barcode already exists for your account', 'danger')
-                    return redirect(url_for('storefront.vendor_portal'))
-                product.barcode = validated_data.barcode.strip()
-
-            product.margin_threshold = DashboardMetrics.calculate_margin_threshold(product)
-            db.session.add(product)
-            db.session.flush()
-
-            image_file = request.files.get('image')
-            if image_file and image_file.filename:
-                try:
-                    product.image_filename = save_product_image(image_file, product.id)
-                except ValueError as image_error:
-                    db.session.rollback()
-                    logger.warning('Vendor product image upload failed: %s', image_error)
-                    flash(f'Product image upload failed: {image_error}', 'danger')
-                    return redirect(url_for('storefront.vendor_portal'))
-
-            initial_qty = validated_data.initial_quantity or 0
-            if initial_qty > 0:
-                movement = InventoryMovement(
-                    product_id=product.id,
-                    quantity=initial_qty,
-                    movement_type='receipt',
-                    unit_cost=product.cogs_per_unit,
-                    notes='Initial stock submitted via vendor portal'
-                )
-                db.session.add(movement)
-
-            db.session.commit()
-
-            SecurityUtils.log_security_event('vendor_product_submitted', {
-                'user_id': current_user.id,
-                'product_id': product.id,
-                'product_name': product.name
-            }, 'info')
-
-            flash('Product submitted. Awaiting admin approval before it appears in the storefront.', 'success')
-            return redirect(url_for('storefront.vendor_portal'))
-
-        except ValueError as err:
-            logger.warning('Vendor product submission blocked: %s', err)
-            flash(str(err), 'danger')
-        except Exception as err:
-            logger.error('Vendor product creation failed: %s', exc_info=True)
-            db.session.rollback()
-            flash('Failed to save product. Contact support if the issue persists.', 'danger')
-
     return render_template(
         'storefront/vendor_portal.html',
-        form=form,
-        products=pending_products,
         storefront_metrics=storefront_metrics,
         recent_storefront_orders=recent_storefront_orders
     )
-
 
 @storefront_bp.route('/storefront/admin/vendors', methods=['GET', 'POST'])
 @handle_exceptions

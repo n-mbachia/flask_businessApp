@@ -24,25 +24,7 @@
                 'endpoint': 'analytics.analytics',
                 'icon': 'fas fa-chart-line',
                 'active_prefixes': ['analytics.']
-            },
-            {
-                'label': 'Products',
-                'endpoint': 'products.manage_products',
-                'icon': 'fas fa-boxes',
-                'active_prefixes': ['products.']
-            },
-            {
-                'label': 'Orders',
-                'endpoint': 'orders.index',
-                'icon': 'fas fa-receipt',
-                'active_prefixes': ['orders.']
-            },
-            {
-                'label': 'Customers',
-                'endpoint': 'customer.index',
-                'icon': 'fas fa-users',
-                'active_prefixes': ['customer.']
-            }
+            }            
         ] %}
         {% if is_vendor or is_admin %}
             {% set nav_links = nav_links + [

@@ -43,7 +43,6 @@ def _generate_sku(product_name: str, user_id: int) -> str:
             break
     return sku
 
-
 @products_bp.route('/products', methods=['GET', 'POST'])
 @login_required
 @handle_exceptions
@@ -51,6 +50,7 @@ def _generate_sku(product_name: str, user_id: int) -> str:
 def manage_products():
     form = ProductForm()
 
+    # Pagination handling
     try:
         pagination = validate_pagination(
             page=request.args.get('page', 1, type=int),
@@ -63,6 +63,7 @@ def manage_products():
 
     if form.validate_on_submit():
         try:
+            # Gather form data into a dictionary
             product_data = {
                 'name': sanitize_input(form.name.data, 'html'),
                 'description': sanitize_input(form.description.data or '', 'html'),
@@ -75,6 +76,7 @@ def manage_products():
                 'initial_quantity': int(form.initial_quantity.data or 0)  # only used for creation
             }
 
+            # Security checks
             if check_security(product_data['name'], 'all') or check_security(product_data['description'], 'all'):
                 SecurityUtils.log_security_event('product_security_issue', {
                     'user_id': current_user.id,
@@ -84,6 +86,7 @@ def manage_products():
                 flash('Invalid input detected in product data.', 'danger')
                 return redirect(url_for('products.manage_products'))
 
+            # Validate entity structure (assumes validate_entity returns (validated_data, errors))
             validated_data, errors = validate_entity('product', product_data, sanitize=False)
             if errors:
                 for error in errors:
@@ -93,6 +96,7 @@ def manage_products():
             product_id = request.form.get('product_id')
             product = None
 
+            # Check for existing product with the same name (excluding current if editing)
             if product_id and product_id != 'None':
                 product = Product.query.filter_by(id=product_id, user_id=current_user.id).first()
                 if not product:
@@ -115,6 +119,7 @@ def manage_products():
                 flash('Product name already exists', 'danger')
                 return redirect(url_for('products.manage_products'))
 
+            # Create or update product
             if not product:
                 product = Product(user_id=current_user.id)
                 SecurityUtils.log_security_event('product_created', {
@@ -130,24 +135,23 @@ def manage_products():
                     'ip': request.remote_addr
                 }, 'info')
 
-            # Update product with validated data
+            # Assign validated data
             product.name = validated_data.name
             product.description = validated_data.description
-            if not validated_data.sku or validated_data.sku.strip() == '':
-                product.sku = _generate_sku(validated_data.name, current_user.id)
-            else:
-                product.sku = validated_data.sku.strip()
+            product.sku = validated_data.sku.strip() if validated_data.sku and validated_data.sku.strip() else _generate_sku(validated_data.name, current_user.id)
             product.barcode = validated_data.barcode.strip() if validated_data.barcode else None
             product.category = validated_data.category
             product.selling_price_per_unit = validated_data.price
             product.cogs_per_unit = validated_data.cost_price
             product.reorder_level = validated_data.reorder_point
 
+            # Calculate margin threshold (uses product's own data)
             product.margin_threshold = DashboardMetrics.calculate_margin_threshold(product)
 
             db.session.add(product)
-            db.session.flush()
+            db.session.flush()  # Get product.id for image and inventory
 
+            # Handle image upload
             image_file = request.files.get('image')
             if image_file and image_file.filename:
                 try:
@@ -162,6 +166,7 @@ def manage_products():
                     delete_product_image(product.image_filename)
                 product.image_filename = new_image
 
+            # If creating and initial quantity > 0, create inventory movement
             if not product_id and validated_data.initial_quantity > 0:
                 from app.models import InventoryMovement
                 movement = InventoryMovement(
@@ -174,9 +179,7 @@ def manage_products():
                 db.session.add(movement)
 
             db.session.commit()
-
             flash('Product saved successfully!', 'success')
-            # Optionally preserve page number? For simplicity, redirect to page 1.
             return redirect(url_for('products.manage_products'))
 
         except Exception as e:
@@ -190,11 +193,39 @@ def manage_products():
             flash('An error occurred while saving the product. Please try again.', 'danger')
             return redirect(url_for('products.manage_products'))
 
+    # Fetch paginated products for the current user
     products = Product.query.filter_by(user_id=current_user.id).paginate(
         page=pagination['page'],
         per_page=pagination['per_page']
     )
-    return render_template('products/products.html', form=form, products=products)
+
+    # Convert products to JSON-serializable dicts for client-side use
+    def product_to_dict(p):
+        """Convert a Product ORM instance to a plain dict for JSON."""
+        return {
+            'id': p.id,
+            'name': p.name,
+            'sku': p.sku,
+            'barcode': p.barcode,
+            'description': p.description,
+            'cogs_per_unit': float(p.cogs_per_unit) if p.cogs_per_unit else 0,
+            'selling_price_per_unit': float(p.selling_price_per_unit) if p.selling_price_per_unit else 0,
+            'reorder_level': p.reorder_level,
+            'current_stock': p.current_stock,                # assumed property
+            'margin_percentage': float(p.margin_percentage) if p.margin_percentage else 0,
+            'effective_margin_threshold': float(p.effective_margin_threshold) if p.effective_margin_threshold else 0,
+            'category': p.category,
+            'image_url': p.image_url,
+        }
+
+    products_json = [product_to_dict(p) for p in products.items]
+
+    return render_template(
+        'products/products.html',
+        form=form,
+        products=products,
+        products_json=products_json
+    )
 
 @products_bp.route('/products/<int:product_id>/lots/new', methods=['GET', 'POST'])
 @login_required

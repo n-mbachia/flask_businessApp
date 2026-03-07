@@ -1,426 +1,579 @@
+<!-- products.html -->
+
 {% extends "_base.html" %}
 
-{% block title %}Products{% endblock %}
+{% block title %}Products | MN Ventures{% endblock %}
 
 {% block extra_head %}
 {{ super() }}
 <link href="{{ url_for('static', filename='css/products-management.css') }}" rel="stylesheet">
+<style>
+  /* Sticky table header */
+  .sticky-header thead th {
+    position: sticky;
+    top: 0;
+    background-color: #f8fafc; /* bg-slate-50 */
+    z-index: 10;
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  }
+  /* Responsive table: hide less important columns on small screens */
+  @media (max-width: 640px) {
+    .hide-on-mobile {
+      display: none;
+    }
+  }
+  /* Toast animations */
+  .toast-fade-enter-active, .toast-fade-leave-active {
+    transition: opacity 0.3s;
+  }
+  .toast-fade-enter, .toast-fade-leave-to {
+    opacity: 0;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
-<div class="bg-gradient-to-br from-slate-50 via-white to-blue-50">
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<div class="bg-gradient-to-br from-slate-50 via-white to-blue-50" 
+     x-data="productManager()" 
+     x-init="init"
+     @product-saved.window="showToast('Product saved successfully', 'success')"
+     @product-deleted.window="showToast('Product deleted', 'info')"
+     @error.window="showToast($event.detail.message, 'error')">
+  
+  <!-- Toast container -->
+  <div class="fixed bottom-4 right-4 z-50 space-y-2">
+    <template x-for="(toast, index) in toasts" :key="index">
+      <div x-show="toast.show" 
+           x-transition:enter="toast-fade-enter-active"
+           x-transition:enter-start="toast-fade-enter"
+           x-transition:leave="toast-fade-leave-active"
+           x-transition:leave-start="toast-fade-leave-to"
+           class="px-4 py-3 rounded-lg shadow-lg text-white flex items-center gap-2"
+           :class="{
+             'bg-green-600': toast.type === 'success',
+             'bg-blue-600': toast.type === 'info',
+             'bg-red-600': toast.type === 'error',
+             'bg-yellow-600': toast.type === 'warning'
+           }">
+        <i class="fas" :class="{
+          'fa-check-circle': toast.type === 'success',
+          'fa-info-circle': toast.type === 'info',
+          'fa-exclamation-triangle': toast.type === 'error',
+          'fa-exclamation-circle': toast.type === 'warning'
+        }"></i>
+        <span x-text="toast.message"></span>
+      </div>
+    </template>
+  </div>
+
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+    <!-- Header -->
     <section class="mb-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <div>
-                <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Catalog Workspace</p>
-                <h2 class="mt-2 text-3xl font-bold text-slate-900">Manage Products</h2>
-                <p class="mt-1 text-sm text-slate-600">Create products, track margin health, and keep inventory listings storefront-ready.</p>
-            </div>
-            <button type="button" class="inline-flex items-center px-4 py-2 rounded-xl border border-slate-300 text-sm font-semibold text-slate-700 bg-white hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-slate-500/20" id="clearFormBtn">
-                <i class="fas fa-plus-circle mr-2"></i>New Product
-            </button>
+      <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p class="text-xs font-semibold uppercase tracking-[0.2em] text-blue-700">Catalog Workspace</p>
+          <h2 class="mt-2 text-3xl font-bold text-slate-900">Manage Products</h2>
+          <p class="mt-1 text-sm text-slate-600">Create products, track margin health, and keep inventory listings storefront‑ready.</p>
         </div>
+        <button type="button" 
+                class="inline-flex items-center px-4 py-2 rounded-xl border border-transparent text-sm font-semibold text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-500/20 transition-colors" 
+                @click="resetForm(); showForm = true; $el.blur()">
+          <i class="fas fa-plus-circle mr-2"></i>New Product
+        </button>
+      </div>
     </section>
 
-    <!-- Product Form Card -->
-    <div class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
-        <h5 class="text-lg font-medium mb-4" id="formTitle">Add New Product</h5>
-        <form id="productForm" method="POST" action="{{ url_for('products.manage_products') }}" enctype="multipart/form-data" novalidate>
-            {{ form.hidden_tag() }}
-            <input type="hidden" name="product_id" id="product_id">
+    <!-- Product Form Card (Alpine) -->
+    <div x-show="showForm" x-collapse class="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm mb-8">
+      <h5 class="text-lg font-medium mb-4" x-text="formTitle"></h5>
+      <form id="productForm" method="POST" action="{{ url_for('products.manage_products') }}" enctype="multipart/form-data" @submit.prevent="submitForm">
+        {{ form.hidden_tag() }}
+        <input type="hidden" name="product_id" x-model="formData.product_id">
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- Left Column -->
-                <div>
-                    <div class="mb-4">
-                        <label for="name" class="block text-sm font-medium text-slate-700 mb-1">{{ form.name.label.text }}</label>
-                        <input type="text" name="name" id="name" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="e.g., Wireless Headphones">
-                        {% for error in form.name.errors %}
-                            <p class="mt-1 text-sm text-red-600"><i class="fas fa-exclamation-circle mr-1"></i>{{ error }}</p>
-                        {% endfor %}
-                    </div>
-                    <div class="mb-4">
-                        <label for="description" class="block text-sm font-medium text-slate-700 mb-1">{{ form.description.label.text }}</label>
-                        <textarea name="description" id="description" rows="3" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="Brief description..."></textarea>
-                    </div>
-                    <div class="mb-4">
-                        <label for="image" class="block text-sm font-medium text-slate-700 mb-1">Product Image</label>
-                        <input class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" type="file" id="image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
-                        <p class="mt-1 text-xs text-slate-500">Optional image shown in listings and storefront.</p>
-                    </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="mb-4">
-                            <label for="sku" class="block text-sm font-medium text-slate-700 mb-1">{{ form.sku.label.text }}</label>
-                            <input type="text" name="sku" id="sku" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="Auto-generated if empty">
-                        </div>
-                        <div class="mb-4">
-                            <label for="barcode" class="block text-sm font-medium text-slate-700 mb-1">{{ form.barcode.label.text }}</label>
-                            <input type="text" name="barcode" id="barcode" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="UPC / EAN">
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label for="category" class="block text-sm font-medium text-slate-700 mb-1">{{ form.category.label.text }}</label>
-                        <select name="category" id="category" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
-                            {{ form.category()|safe }}
-                        </select>
-                    </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <!-- Left Column -->
+          <div>
+            <!-- Name -->
+            <div class="mb-4">
+              <label for="name" class="block text-sm font-medium text-slate-700 mb-1">{{ form.name.label.text }} *</label>
+              <input type="text" 
+                     name="name" 
+                     id="name" 
+                     x-model="formData.name"
+                     @input="validateName()"
+                     class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm"
+                     :class="{ 'border-red-300 focus:border-red-500': errors.name }"
+                     placeholder="e.g., Wireless Headphones">
+              <p x-show="errors.name" x-text="errors.name" class="mt-1 text-sm text-red-600"></p>
+            </div>
+            <!-- Description -->
+            <div class="mb-4">
+              <label for="description" class="block text-sm font-medium text-slate-700 mb-1">{{ form.description.label.text }}</label>
+              <textarea name="description" 
+                        id="description" 
+                        x-model="formData.description"
+                        rows="3" 
+                        class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                        placeholder="Brief description..."></textarea>
+            </div>
+            <!-- Image upload with preview -->
+            <div class="mb-4">
+              <label for="image" class="block text-sm font-medium text-slate-700 mb-1">Product Image</label>
+              <input type="file" 
+                     id="image" 
+                     name="image" 
+                     accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
+                     @change="previewImage($event)"
+                     class="block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+              <div class="mt-2 flex items-center gap-2" x-show="imagePreview">
+                <img :src="imagePreview" class="w-16 h-16 object-cover rounded border border-slate-200">
+                <button type="button" @click="clearImagePreview" class="text-xs text-slate-500 hover:text-red-600">
+                  <i class="fas fa-times"></i> Remove
+                </button>
+              </div>
+              <p class="mt-1 text-xs text-slate-500">Optional image shown in listings and storefront.</p>
+            </div>
+            <!-- SKU & Barcode -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="mb-4">
+                <label for="sku" class="block text-sm font-medium text-slate-700 mb-1">{{ form.sku.label.text }}</label>
+                <input type="text" 
+                       name="sku" 
+                       id="sku" 
+                       x-model="formData.sku"
+                       class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                       placeholder="Auto‑generated if empty">
+              </div>
+              <div class="mb-4">
+                <label for="barcode" class="block text-sm font-medium text-slate-700 mb-1">{{ form.barcode.label.text }}</label>
+                <input type="text" 
+                       name="barcode" 
+                       id="barcode" 
+                       x-model="formData.barcode"
+                       class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                       placeholder="UPC / EAN">
+              </div>
+            </div>
+            <!-- Category -->
+            <div class="mb-4">
+              <label for="category" class="block text-sm font-medium text-slate-700 mb-1">{{ form.category.label.text }}</label>
+              <select name="category" 
+                      id="category" 
+                      x-model="formData.category"
+                      class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
+                {% for value, label in form.category.choices %}
+                  <option value="{{ value }}">{{ label }}</option>
+                {% endfor %}
+              </select>
+            </div>
+          </div>
+
+          <!-- Right Column -->
+          <div>
+            <!-- COGS & Price -->
+            <div class="grid grid-cols-2 gap-3">
+              <div class="mb-4">
+                <label for="cogs_per_unit" class="block text-sm font-medium text-slate-700 mb-1">{{ form.cogs_per_unit.label.text }}</label>
+                <div class="flex rounded-md shadow-sm">
+                  <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
+                  <input type="number" 
+                         step="0.01" 
+                         min="0"
+                         name="cogs_per_unit" 
+                         id="cogs_per_unit" 
+                         x-model.number="formData.cogs"
+                         @input="calculateMargin"
+                         class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                         placeholder="0.00">
                 </div>
-
-                <!-- Right Column -->
-                <div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="mb-4">
-                            <label for="cogs_per_unit" class="block text-sm font-medium text-slate-700 mb-1">{{ form.cogs_per_unit.label.text }}</label>
-                            <div class="flex rounded-md shadow-sm">
-                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
-                                <input type="number" step="0.01" name="cogs_per_unit" id="cogs_per_unit" class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="0.00">
-                            </div>
-                            {% for error in form.cogs_per_unit.errors %}
-                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                        <div class="mb-4">
-                            <label for="selling_price_per_unit" class="block text-sm font-medium text-slate-700 mb-1">{{ form.selling_price_per_unit.label.text }}</label>
-                            <div class="flex rounded-md shadow-sm">
-                                <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
-                                <input type="number" step="0.01" name="selling_price_per_unit" id="selling_price_per_unit" class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" placeholder="0.00">
-                            </div>
-                            {% for error in form.selling_price_per_unit.errors %}
-                                <p class="mt-1 text-sm text-red-600">{{ error }}</p>
-                            {% endfor %}
-                        </div>
-                    </div>
-                    <div class="mb-4">
-                        <label for="reorder_level" class="block text-sm font-medium text-slate-700 mb-1">{{ form.reorder_level.label.text }}</label>
-                        <input type="number" name="reorder_level" id="reorder_level" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
-                    </div>
-
-                    <!-- Live margin display -->
-                    <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
-                        <div class="flex justify-between items-center">
-                            <span class="text-sm font-medium">Current Margin:</span>
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" id="marginDisplay">0.00%</span>
-                        </div>
-                        <p class="text-xs text-slate-500 mt-1">(Selling price - COGS) / Selling price</p>
-                    </div>
-
-                    <!-- Initial quantity (only visible when creating) -->
-                    <div class="mb-4" id="initialQuantityField">
-                        <label for="initial_quantity" class="block text-sm font-medium text-slate-700 mb-1">{{ form.initial_quantity.label.text }}</label>
-                        <input type="number" name="initial_quantity" id="initial_quantity" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
-                        <p class="mt-1 text-xs text-slate-500">Set initial stock level (will create inventory movement).</p>
-                    </div>
+              </div>
+              <div class="mb-4">
+                <label for="selling_price_per_unit" class="block text-sm font-medium text-slate-700 mb-1">{{ form.selling_price_per_unit.label.text }}</label>
+                <div class="flex rounded-md shadow-sm">
+                  <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
+                  <input type="number" 
+                         step="0.01" 
+                         min="0"
+                         name="selling_price_per_unit" 
+                         id="selling_price_per_unit" 
+                         x-model.number="formData.price"
+                         @input="calculateMargin"
+                         class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                         placeholder="0.00">
                 </div>
+              </div>
+            </div>
+            <!-- Reorder Level -->
+            <div class="mb-4">
+              <label for="reorder_level" class="block text-sm font-medium text-slate-700 mb-1">{{ form.reorder_level.label.text }}</label>
+              <input type="number" 
+                     min="0"
+                     name="reorder_level" 
+                     id="reorder_level" 
+                     x-model.number="formData.reorder_level"
+                     class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
             </div>
 
-            <hr class="my-6 border-slate-200">
-            <div class="flex gap-3">
-                <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20" id="submitBtn">
-                    <i class="fas fa-save mr-2"></i>Save Product
-                </button>
-                <button type="button" class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20" id="cancelEditBtn">
-                    <i class="fas fa-times mr-2"></i>Cancel
-                </button>
+            <!-- Live margin display with threshold warning -->
+            <div class="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
+              <div class="flex justify-between items-center">
+                <span class="text-sm font-medium">Current Margin:</span>
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                      :class="margin < 20 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'"
+                      x-text="margin.toFixed(2) + '%'"></span>
+              </div>
+              <p x-show="margin < 20" class="text-xs text-amber-700 mt-1">
+                <i class="fas fa-exclamation-triangle mr-1"></i>Below 20% threshold
+              </p>
+              <p class="text-xs text-slate-500 mt-1">(Selling price - COGS) / Selling price</p>
             </div>
-        </form>
+
+            <!-- Initial quantity (only visible when creating) -->
+            <div class="mb-4" x-show="!formData.product_id">
+              <label for="initial_quantity" class="block text-sm font-medium text-slate-700 mb-1">{{ form.initial_quantity.label.text }}</label>
+              <input type="number" 
+                     name="initial_quantity" 
+                     id="initial_quantity" 
+                     x-model.number="formData.initial_quantity"
+                     min="0"
+                     class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm">
+              <p class="mt-1 text-xs text-slate-500">Set initial stock level (will create inventory movement).</p>
+            </div>
+          </div>
+        </div>
+
+        <hr class="my-6 border-slate-200">
+        <div class="flex gap-3">
+          <button type="submit" 
+                  class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  :disabled="!isFormValid || submitting">
+            <i class="fas" :class="{'fa-spinner fa-spin': submitting, 'fa-save': !submitting}"></i>
+            <span class="ml-2" x-text="submitBtnText"></span>
+          </button>
+          <button type="button" 
+                  class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20 transition-colors"
+                  @click="cancelEdit">
+            <i class="fas fa-times mr-2"></i>Cancel
+          </button>
+        </div>
+      </form>
     </div>
 
     <!-- Product List Card -->
     <div class="rounded-3xl border border-slate-200 bg-white overflow-hidden shadow-sm">
-        <div class="px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-            <h5 class="text-lg font-medium">Your Products</h5>
-            <div class="w-full max-w-xs">
-                <input type="text" class="block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="productSearch" placeholder="Search products...">
-            </div>
+      <div class="px-4 py-3 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+        <h5 class="text-lg font-medium">Your Products</h5>
+        <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+          <!-- Category filter -->
+          <select x-model="filters.category" class="rounded-md border-slate-300 text-sm focus:ring-slate-500/20">
+            <option value="">All Categories</option>
+            {% for value, label in form.category.choices %}
+              <option value="{{ value }}">{{ label }}</option>
+            {% endfor %}
+          </select>
+          <!-- Margin filter -->
+          <select x-model="filters.marginStatus" class="rounded-md border-slate-300 text-sm focus:ring-slate-500/20">
+            <option value="">All Margins</option>
+            <option value="below">Below Threshold</option>
+            <option value="ok">OK</option>
+          </select>
+          <!-- Search -->
+          <input type="text" 
+                 x-model="filters.search"
+                 class="block w-full sm:w-64 rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                 placeholder="Search products...">
         </div>
-        <div class="p-4">
-            {% if products and products.items %}
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-slate-200 text-sm" id="productsTable">
-                        <thead class="bg-slate-50">
-                            <tr>
-                                <th class="px-4 py-2 text-center text-xs font-medium text-slate-500 uppercase">Image</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Name</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">COGS</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Price</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Margin</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Threshold</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Stock</th>
-                                <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-slate-200">
-                            {% for product in products.items %}
-                            <tr>
-                                <td class="px-4 py-2 text-center">
-                                    <img src="{{ product.image_url }}" alt="{{ product.name }}" class="w-10 h-10 rounded object-cover mx-auto">
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <strong>{{ product.name }}</strong><br>
-                                    <span class="text-xs text-slate-500">{{ product.sku or '—' }}</span>
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">${{ "%.2f"|format(product.cogs_per_unit) }}</td>
-                                <td class="px-4 py-2 whitespace-nowrap">${{ "%.2f"|format(product.selling_price_per_unit) }}</td>
-                                <td class="px-4 py-2 whitespace-nowrap {{ 'text-red-600' if product.margin_percentage < product.effective_margin_threshold else 'text-green-600' }}">
-                                    {{ "%.1f"|format(product.margin_percentage) }}%
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">{{ "%.1f"|format(product.effective_margin_threshold) }}%</td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    {% if product.margin_percentage < product.effective_margin_threshold %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fas fa-exclamation-triangle mr-1"></i>Below Threshold</span>
-                                    {% else %}
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-check-circle mr-1"></i>OK</span>
-                                    {% endif %}
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {{ 'bg-yellow-100 text-yellow-800' if product.current_stock <= product.reorder_level and product.current_stock > 0 else 'bg-slate-100 text-slate-800' if product.current_stock <= 0 else 'bg-blue-100 text-blue-800' }}">
-                                        {{ product.current_stock }} units
-                                    </span>
-                                </td>
-                                <td class="px-4 py-2 whitespace-nowrap">
-                                    <div class="flex gap-1">
-                                        <a href="{{ url_for('products.product_analytics_dashboard', product_id=product.id) }}" class="p-1 text-indigo-600 hover:text-indigo-800" title="Analytics">
-                                            <i class="fas fa-chart-line"></i>
-                                        </a>
-                                        <button class="p-1 text-yellow-600 hover:text-yellow-800 edit-btn" data-product-id="{{ product.id }}" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <form action="{{ url_for('products.delete_product', product_id=product.id) }}" method="POST" class="inline" onsubmit="return confirm('Are you sure you want to delete {{ product.name }}?');">
-                                            <button type="submit" class="p-1 text-red-600 hover:text-red-800" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </form>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
+      </div>
+      <div class="p-4">
+        {% if products and products.items %}
+          <!-- Sorting controls -->
+          <div class="flex justify-end mb-2 text-xs text-slate-500">
+            <button @click="sort('name')" class="hover:text-slate-700 mr-3">
+              Name <i class="fas" :class="{'fa-sort-up': sortField === 'name' && sortDir === 'asc', 'fa-sort-down': sortField === 'name' && sortDir === 'desc', 'fa-sort': sortField !== 'name'}"></i>
+            </button>
+            <button @click="sort('margin')" class="hover:text-slate-700 mr-3">
+              Margin <i class="fas" :class="{'fa-sort-up': sortField === 'margin' && sortDir === 'asc', 'fa-sort-down': sortField === 'margin' && sortDir === 'desc', 'fa-sort': sortField !== 'margin'}"></i>
+            </button>
+            <button @click="sort('stock')" class="hover:text-slate-700">
+              Stock <i class="fas" :class="{'fa-sort-up': sortField === 'stock' && sortDir === 'asc', 'fa-sort-down': sortField === 'stock' && sortDir === 'desc', 'fa-sort': sortField !== 'stock'}"></i>
+            </button>
+          </div>
 
-                <!-- Pagination -->
-                <div class="flex justify-between items-center mt-4">
-                    <p class="text-sm text-slate-500">Showing {{ products.page }} of {{ products.pages }} pages</p>
-                    <nav>
-                        <ul class="flex gap-1">
-                            {% if products.has_prev %}
-                                <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-700 hover:bg-slate-50" href="{{ url_for('products.manage_products', page=products.prev_num) }}">Previous</a></li>
-                            {% else %}
-                                <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400 bg-slate-50">Previous</span></li>
-                            {% endif %}
+          <div class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-slate-200 text-sm sticky-header" id="productsTable">
+              <thead class="bg-slate-50">
+                <tr>
+                  <th class="px-4 py-2 text-center text-xs font-medium text-slate-500 uppercase">Image</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer" @click="sort('name')">Name</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase hide-on-mobile">COGS</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase hide-on-mobile">Price</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer" @click="sort('margin')">Margin</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase hide-on-mobile">Threshold</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase cursor-pointer" @click="sort('stock')">Stock</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-slate-200">
+                <template x-for="product in filteredAndSortedProducts" :key="product.id">
+                  <tr>
+                    <td class="px-4 py-2 text-center">
+                      <img :src="product.image_url" :alt="product.name" class="w-10 h-10 rounded object-cover mx-auto">
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <strong x-text="product.name"></strong><br>
+                      <span class="text-xs text-slate-500" x-text="product.sku || '—'"></span>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap hide-on-mobile" x-text="'$' + product.cogs_per_unit.toFixed(2)"></td>
+                    <td class="px-4 py-2 whitespace-nowrap hide-on-mobile" x-text="'$' + product.selling_price_per_unit.toFixed(2)"></td>
+                    <td class="px-4 py-2 whitespace-nowrap" :class="product.margin_percentage < product.effective_margin_threshold ? 'text-red-600' : 'text-green-600'">
+                      <span x-text="product.margin_percentage.toFixed(1) + '%'"></span>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap hide-on-mobile" x-text="product.effective_margin_threshold.toFixed(1) + '%'"></td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="product.margin_percentage < product.effective_margin_threshold ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'">
+                        <i class="fas" :class="product.margin_percentage < product.effective_margin_threshold ? 'fa-exclamation-triangle' : 'fa-check-circle'"></i>
+                        <span class="ml-1" x-text="product.margin_percentage < product.effective_margin_threshold ? 'Below Threshold' : 'OK'"></span>
+                      </span>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="{
+                              'bg-yellow-100 text-yellow-800': product.current_stock <= product.reorder_level && product.current_stock > 0,
+                              'bg-slate-100 text-slate-800': product.current_stock <= 0,
+                              'bg-blue-100 text-blue-800': product.current_stock > product.reorder_level
+                            }">
+                        <span x-text="product.current_stock + ' units'"></span>
+                      </span>
+                    </td>
+                    <td class="px-4 py-2 whitespace-nowrap">
+                      <div class="flex gap-1">
+                        <a :href="'{{ url_for('products.product_analytics_dashboard', product_id=0) }}'.replace('0', product.id)" 
+                           class="p-1 text-indigo-600 hover:text-indigo-800" 
+                           title="Analytics">
+                          <i class="fas fa-chart-line"></i>
+                        </a>
+                        <button class="p-1 text-yellow-600 hover:text-yellow-800" 
+                                @click="editProduct(product)"
+                                title="Edit">
+                          <i class="fas fa-edit"></i>
+                        </button>
+                        <form :action="'{{ url_for('products.delete_product', product_id=0) }}'.replace('0', product.id)" 
+                              method="POST" 
+                              class="inline" 
+                              @submit.prevent="deleteProduct($event, product)">
+                          <button type="submit" class="p-1 text-red-600 hover:text-red-800" title="Delete">
+                            <i class="fas fa-trash"></i>
+                          </button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
 
-                            {% for page_num in products.iter_pages() %}
-                                {% if page_num %}
-                                    <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm {{ 'bg-slate-900 text-white' if page_num == products.page else 'text-slate-700 hover:bg-slate-50' }}" href="{{ url_for('products.manage_products', page=page_num) }}">{{ page_num }}</a></li>
-                                {% else %}
-                                    <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400">…</span></li>
-                                {% endif %}
-                            {% endfor %}
+          <!-- Pagination (keep as is from original) -->
+          <div class="flex justify-between items-center mt-4">
+            <p class="text-sm text-slate-500">Showing {{ products.page }} of {{ products.pages }} pages</p>
+            <nav>
+              <ul class="flex gap-1">
+                {% if products.has_prev %}
+                  <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-700 hover:bg-slate-50" href="{{ url_for('products.manage_products', page=products.prev_num) }}">Previous</a></li>
+                {% else %}
+                  <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400 bg-slate-50">Previous</span></li>
+                {% endif %}
 
-                            {% if products.has_next %}
-                                <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-700 hover:bg-slate-50" href="{{ url_for('products.manage_products', page=products.next_num) }}">Next</a></li>
-                            {% else %}
-                                <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400 bg-slate-50">Next</span></li>
-                            {% endif %}
-                        </ul>
-                    </nav>
-                </div>
-            {% else %}
-                <div class="text-center py-8">
-                    <i class="fas fa-box-open fa-3x text-slate-300 mb-3"></i>
-                    <p class="text-slate-500">No products yet. Create your first product above.</p>
-                </div>
-            {% endif %}
-        </div>
+                {% for page_num in products.iter_pages() %}
+                  {% if page_num %}
+                    <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm {{ 'bg-slate-900 text-white' if page_num == products.page else 'text-slate-700 hover:bg-slate-50' }}" href="{{ url_for('products.manage_products', page=page_num) }}">{{ page_num }}</a></li>
+                  {% else %}
+                    <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400">…</span></li>
+                  {% endif %}
+                {% endfor %}
+
+                {% if products.has_next %}
+                  <li><a class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-700 hover:bg-slate-50" href="{{ url_for('products.manage_products', page=products.next_num) }}">Next</a></li>
+                {% else %}
+                  <li><span class="px-3 py-1 border border-slate-300 rounded-md text-sm text-slate-400 bg-slate-50">Next</span></li>
+                {% endif %}
+              </ul>
+            </nav>
+          </div>
+        {% else %}
+          <div class="text-center py-8">
+            <i class="fas fa-box-open fa-3x text-slate-300 mb-3"></i>
+            <p class="text-slate-500">No products yet. Create your first product above.</p>
+          </div>
+        {% endif %}
+      </div>
     </div>
-</div>
-</div>
+  </div>
 
-<!-- Edit Modal (Alpine) -->
-<div x-data="{ open: false, product: null }"
-     x-show="open"
-     x-cloak
-     @open-edit-modal.window="open = true; product = $event.detail"
-     @keydown.escape.window="open = false"
-     class="fixed inset-0 z-50 overflow-y-auto">
+  <!-- Edit Modal (Alpine) - Improved version -->
+  <div x-data="{ open: false }"
+       x-show="open"
+       x-cloak
+       @open-edit-modal.window="open = true; formData = { ...$event.detail, product_id: $event.detail.id, cogs: $event.detail.cogs_per_unit, price: $event.detail.selling_price_per_unit }; imagePreview = $event.detail.image_url; calculateMargin()"
+       @keydown.escape.window="open = false"
+       class="fixed inset-0 z-50 overflow-y-auto">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <div x-show="open"
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0"
-             x-transition:enter-end="opacity-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100"
-             x-transition:leave-end="opacity-0"
-             class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity"
-             @click="open = false"
-             aria-hidden="true"></div>
-        <div x-show="open"
-             x-transition:enter="ease-out duration-300"
-             x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave="ease-in duration-200"
-             x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
-             x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
-            <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
-                <h3 class="text-lg font-medium text-slate-900" id="editModalLabel">Edit Product</h3>
-                <div class="mt-4">
-                    <form id="editForm" method="POST" action="{{ url_for('products.manage_products') }}" enctype="multipart/form-data">
-                        {{ form.hidden_tag() }}
-                        <input type="hidden" name="product_id" id="modal_product_id" x-bind:value="product?.id">
+      <div x-show="open"
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0"
+           x-transition:enter-end="opacity-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"
+           class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity"
+           @click="open = false"
+           aria-hidden="true"></div>
+      <div x-show="open"
+           x-transition:enter="ease-out duration-300"
+           x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           x-transition:enter-end="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave="ease-in duration-200"
+           x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
+           x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
+           class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-2xl sm:w-full">
+        <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
+          <h3 class="text-lg font-medium text-slate-900">Edit Product</h3>
+          <div class="mt-4">
+            <form id="editForm" method="POST" :action="'{{ url_for('products.manage_products') }}'" enctype="multipart/form-data" @submit.prevent="submitEditForm">
+              {{ form.hidden_tag() }}
+              <input type="hidden" name="product_id" x-model="formData.product_id">
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-slate-700">Product Name</label>
-                                    <input type="text" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_name" name="name" x-bind:value="product?.name">
-                                </div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-slate-700">Description</label>
-                                    <textarea class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_description" name="description" rows="3" x-text="product?.description"></textarea>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-slate-700" for="modal_image">Product Image</label>
-                                    <input type="file" class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" id="modal_image" name="image" accept="image/png, image/jpeg, image/jpg, image/gif, image/webp">
-                                    <p class="mt-1 text-xs text-slate-500">Upload to update the storefront image.</p>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="mb-3">
-                                        <label class="block text-sm font-medium text-slate-700">SKU</label>
-                                        <input type="text" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_sku" name="sku" x-bind:value="product?.sku">
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="block text-sm font-medium text-slate-700">Barcode</label>
-                                        <input type="text" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_barcode" name="barcode" x-bind:value="product?.barcode">
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-slate-700">Category</label>
-                                    <select class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_category" name="category">
-                                        {% for value, label in form.category.choices %}
-                                            <option value="{{ value }}">{{ label }}</option>
-                                        {% endfor %}
-                                    </select>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="grid grid-cols-2 gap-2">
-                                    <div class="mb-3">
-                                        <label class="block text-sm font-medium text-slate-700">COGS per Unit</label>
-                                        <div class="flex mt-1 rounded-md shadow-sm">
-                                            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
-                                            <input type="number" step="0.01" class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_cogs_per_unit" name="cogs_per_unit" x-bind:value="product?.cogs_per_unit">
-                                        </div>
-                                    </div>
-                                    <div class="mb-3">
-                                        <label class="block text-sm font-medium text-slate-700">Selling Price</label>
-                                        <div class="flex mt-1 rounded-md shadow-sm">
-                                            <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
-                                            <input type="number" step="0.01" class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_selling_price_per_unit" name="selling_price_per_unit" x-bind:value="product?.selling_price_per_unit">
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="block text-sm font-medium text-slate-700">Reorder Level</label>
-                                    <input type="number" class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" id="modal_reorder_level" name="reorder_level" x-bind:value="product?.reorder_level">
-                                </div>
-                                <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
-                                    <div class="flex justify-between">
-                                        <span class="text-sm font-medium">Current Margin:</span>
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800" id="modal_margin_display">0.00%</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <hr class="my-4">
-                        <div class="flex gap-2 justify-end">
-                            <button type="button" @click="open = false" class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20">
-                                Cancel
-                            </button>
-                            <button type="submit" class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20">
-                                <i class="fas fa-save mr-2"></i>Update Product
-                            </button>
-                        </div>
-                    </form>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium text-slate-700">Product Name *</label>
+                    <input type="text" 
+                           class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                           name="name" 
+                           x-model="formData.name"
+                           @input="validateName()"
+                           :class="{ 'border-red-300': errors.name }">
+                    <p x-show="errors.name" x-text="errors.name" class="text-xs text-red-600 mt-1"></p>
+                  </div>
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium text-slate-700">Description</label>
+                    <textarea class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                              name="description" 
+                              rows="3" 
+                              x-model="formData.description"></textarea>
+                  </div>
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium text-slate-700" for="modal_image">Product Image</label>
+                    <input type="file" 
+                           class="mt-1 block w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                           id="modal_image" 
+                           name="image" 
+                           accept="image/png, image/jpeg, image/jpg, image/gif, image/webp"
+                           @change="previewImage($event)">
+                    <div class="mt-2" x-show="imagePreview">
+                      <img :src="imagePreview" class="w-16 h-16 object-cover rounded border">
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">Upload to update the storefront image.</p>
+                  </div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="mb-3">
+                      <label class="block text-sm font-medium text-slate-700">SKU</label>
+                      <input type="text" 
+                             class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                             name="sku" 
+                             x-model="formData.sku">
+                    </div>
+                    <div class="mb-3">
+                      <label class="block text-sm font-medium text-slate-700">Barcode</label>
+                      <input type="text" 
+                             class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                             name="barcode" 
+                             x-model="formData.barcode">
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium text-slate-700">Category</label>
+                    <select class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                            name="category" 
+                            x-model="formData.category">
+                      {% for value, label in form.category.choices %}
+                        <option value="{{ value }}">{{ label }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
                 </div>
-            </div>
+                <div>
+                  <div class="grid grid-cols-2 gap-2">
+                    <div class="mb-3">
+                      <label class="block text-sm font-medium text-slate-700">COGS per Unit</label>
+                      <div class="flex mt-1 rounded-md shadow-sm">
+                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
+                        <input type="number" step="0.01" min="0"
+                               class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                               name="cogs_per_unit" 
+                               x-model.number="formData.cogs"
+                               @input="calculateMargin">
+                      </div>
+                    </div>
+                    <div class="mb-3">
+                      <label class="block text-sm font-medium text-slate-700">Selling Price</label>
+                      <div class="flex mt-1 rounded-md shadow-sm">
+                        <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-slate-300 bg-slate-50 text-slate-500">$</span>
+                        <input type="number" step="0.01" min="0"
+                               class="flex-1 block w-full rounded-none rounded-r-md border-slate-300 focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                               name="selling_price_per_unit" 
+                               x-model.number="formData.price"
+                               @input="calculateMargin">
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mb-3">
+                    <label class="block text-sm font-medium text-slate-700">Reorder Level</label>
+                    <input type="number" min="0"
+                           class="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm" 
+                           name="reorder_level" 
+                           x-model.number="formData.reorder_level">
+                  </div>
+                  <div class="bg-blue-50 border border-blue-200 rounded-md p-3">
+                    <div class="flex justify-between">
+                      <span class="text-sm font-medium">Current Margin:</span>
+                      <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                            :class="margin < 20 ? 'bg-amber-100 text-amber-800' : 'bg-green-100 text-green-800'"
+                            x-text="margin.toFixed(2) + '%'"></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <hr class="my-4">
+              <div class="flex gap-2 justify-end">
+                <button type="button" 
+                        @click="open = false; resetForm()" 
+                        class="inline-flex items-center px-4 py-2 border border-slate-300 text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20 transition-colors">
+                  Cancel
+                </button>
+                <button type="submit" 
+                        class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20 disabled:opacity-50 transition-colors"
+                        :disabled="!isFormValid || submitting">
+                  <i class="fas" :class="{'fa-spinner fa-spin': submitting, 'fa-save': !submitting}"></i>
+                  <span class="ml-2">Update Product</span>
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
+      </div>
     </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 {{ super() }}
-<script src="{{ url_for('static', filename='js/products-management.js') }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Margin calculation for main form
-    function updateMargin() {
-        const cogs = parseFloat(document.getElementById('cogs_per_unit').value) || 0;
-        const price = parseFloat(document.getElementById('selling_price_per_unit').value) || 0;
-        const margin = price > 0 ? ((price - cogs) / price * 100).toFixed(2) : 0;
-        document.getElementById('marginDisplay').textContent = margin + '%';
-    }
-    document.getElementById('cogs_per_unit').addEventListener('input', updateMargin);
-    document.getElementById('selling_price_per_unit').addEventListener('input', updateMargin);
-
-    // Modal margin
-    function updateModalMargin() {
-        const cogs = parseFloat(document.getElementById('modal_cogs_per_unit').value) || 0;
-        const price = parseFloat(document.getElementById('modal_selling_price_per_unit').value) || 0;
-        const margin = price > 0 ? ((price - cogs) / price * 100).toFixed(2) : 0;
-        document.getElementById('modal_margin_display').textContent = margin + '%';
-    }
-    document.getElementById('modal_cogs_per_unit')?.addEventListener('input', updateModalMargin);
-    document.getElementById('modal_selling_price_per_unit')?.addEventListener('input', updateModalMargin);
-
-    // Toggle initial quantity field based on product_id
-    const productIdField = document.getElementById('product_id');
-    const initialQtyField = document.getElementById('initialQuantityField');
-    const formTitle = document.getElementById('formTitle');
-    const submitBtn = document.getElementById('submitBtn');
-    const cancelBtn = document.getElementById('cancelEditBtn');
-
-    function toggleInitialQty() {
-        if (productIdField.value && productIdField.value !== 'None') {
-            initialQtyField.style.display = 'none';
-            formTitle.textContent = 'Edit Product';
-            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Update Product';
-        } else {
-            initialQtyField.style.display = 'block';
-            formTitle.textContent = 'Add New Product';
-            submitBtn.innerHTML = '<i class="fas fa-save mr-2"></i>Save Product';
-        }
-    }
-    toggleInitialQty();
-
-    document.getElementById('clearFormBtn').addEventListener('click', function() {
-        document.getElementById('productForm').reset();
-        productIdField.value = '';
-        toggleInitialQty();
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    cancelBtn.addEventListener('click', function() {
-        document.getElementById('productForm').reset();
-        productIdField.value = '';
-        toggleInitialQty();
-    });
-
-    // Simple search filter
-    const searchInput = document.getElementById('productSearch');
-    const tableRows = document.querySelectorAll('#productsTable tbody tr');
-    searchInput.addEventListener('keyup', function() {
-        const term = this.value.toLowerCase();
-        tableRows.forEach(row => {
-            const text = row.textContent.toLowerCase();
-            row.style.display = text.includes(term) ? '' : 'none';
-        });
-    });
-
-    // ProductsManager for edit button
-    window.productsManager = new ProductsManager();
-});
+  // Expose product data to the external script
+  window.__PRODUCTS_DATA__ = {{ products_json | tojson | safe }};
 </script>
+<script src="{{ url_for('static', filename='js/products-management.js') }}"></script>
 {% endblock %}

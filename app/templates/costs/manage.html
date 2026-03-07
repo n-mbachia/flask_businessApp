@@ -1,3 +1,5 @@
+<!-- costs.html -->
+
 {% extends "_base.html" %}
 
 {% block title %}Manage Costs{% endblock %}
@@ -5,11 +7,38 @@
 {% block extra_head %}
 {{ super() }}
 <meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+  /* Toast animations */
+  .toast-fade-enter-active, .toast-fade-leave-active {
+    transition: opacity 0.3s;
+  }
+  .toast-fade-enter, .toast-fade-leave-to {
+    opacity: 0;
+  }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="bg-gradient-to-br from-slate-50 via-white to-blue-50">
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <!-- Toast Container (Alpine) -->
+    <div x-data="{ toasts: [] }"
+         @notify.window="toasts.push({ id: Date.now(), ...$event.detail }); setTimeout(() => toasts.shift(), 3000)"
+         class="fixed bottom-4 right-4 z-50 space-y-2">
+        <template x-for="toast in toasts" :key="toast.id">
+            <div x-show="toast.show"
+                 x-transition:enter="toast-fade-enter-active"
+                 x-transition:enter-start="toast-fade-enter"
+                 x-transition:leave="toast-fade-leave-active"
+                 x-transition:leave-start="toast-fade-leave-to"
+                 class="px-4 py-3 rounded-lg shadow-lg text-white flex items-center gap-2"
+                 :class="{ 'bg-green-600': toast.type === 'success', 'bg-red-600': toast.type === 'danger' }">
+                <i class="fas" :class="{ 'fa-check-circle': toast.type === 'success', 'fa-exclamation-triangle': toast.type === 'danger' }"></i>
+                <span x-text="toast.message"></span>
+            </div>
+        </template>
+    </div>
+
     <!-- Header -->
     <section class="mb-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-sm">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -74,7 +103,8 @@
             <h3 class="text-lg leading-6 font-medium text-slate-900">Cost Entries</h3>
             <!-- Filter dropdown (Alpine) -->
             <div x-data="{ open: false }" class="relative">
-                <button @click="open = !open" type="button" class="inline-flex items-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20">
+                <button @click="open = !open" type="button" class="inline-flex items-center px-3 py-2 border border-slate-300 shadow-sm text-sm leading-4 font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500/20"
+                        :aria-expanded="open">
                     <i class="fas fa-filter mr-2"></i> Filter
                 </button>
                 <div x-show="open" 
@@ -180,7 +210,11 @@
 </div>
 
 <!-- Add Cost Modal (Alpine) -->
-<div x-data="{ open: false }" 
+<div x-data="{ 
+    open: false,
+    isDirect: false,
+    isRecurring: false
+}" 
      x-show="open" 
      x-cloak 
      @open-add-modal.window="open = true"
@@ -190,7 +224,7 @@
      role="dialog" 
      aria-modal="true">
     <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-        <!-- Background overlay -->
+        <!-- Background overlay (lower z-index) -->
         <div x-show="open" 
              x-transition:enter="ease-out duration-300"
              x-transition:enter-start="opacity-0"
@@ -198,11 +232,11 @@
              x-transition:leave="ease-in duration-200"
              x-transition:leave-start="opacity-100"
              x-transition:leave-end="opacity-0"
-             class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity"
+             class="fixed inset-0 bg-slate-500 bg-opacity-75 transition-opacity z-40"
              @click="open = false"
              aria-hidden="true"></div>
 
-        <!-- Modal panel -->
+        <!-- Modal panel (higher z-index) -->
         <div x-show="open" 
              x-transition:enter="ease-out duration-300"
              x-transition:enter-start="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
@@ -210,7 +244,8 @@
              x-transition:leave="ease-in duration-200"
              x-transition:leave-start="opacity-100 translate-y-0 sm:scale-100"
              x-transition:leave-end="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"
-             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+             class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all w-full sm:my-8 sm:align-middle sm:max-w-xl z-50">
+            <!-- form content remains exactly as before -->
             <form method="POST" action="{{ url_for('costs.manage_costs', **request.args) }}">
                 {{ form.csrf_token }}
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6">
@@ -237,13 +272,13 @@
                         </div>
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
-                                {{ form.is_direct }}
+                                <input type="checkbox" name="is_direct" id="is_direct" x-model="isDirect" class="h-4 w-4 text-blue-600 focus:ring-slate-500/20 border-slate-300 rounded">
                             </div>
                             <div class="ml-3 text-sm">
                                 {{ form.is_direct.label(class="font-medium text-slate-700") }}
                             </div>
                         </div>
-                        <div x-ref="productField" style="display: none;">
+                        <div x-show="isDirect" x-transition>
                             <label for="product_id" class="block text-sm font-medium text-slate-700">{{ form.product_id.label.text }}</label>
                             {{ form.product_id(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm rounded-md") }}
                         </div>
@@ -261,17 +296,18 @@
                         </div>
                         <div class="flex items-start">
                             <div class="flex items-center h-5">
-                                {{ form.is_recurring }}
+                                <input type="checkbox" name="is_recurring" id="is_recurring" x-model="isRecurring" class="h-4 w-4 text-blue-600 focus:ring-slate-500/20 border-slate-300 rounded">
                             </div>
                             <div class="ml-3 text-sm">
                                 {{ form.is_recurring.label(class="font-medium text-slate-700") }}
                             </div>
                         </div>
-                        <div x-ref="recurrenceField" style="display: none;">
+                        <div x-show="isRecurring" x-transition>
                             <label for="recurrence_frequency" class="block text-sm font-medium text-slate-700">{{ form.recurrence_frequency.label.text }}</label>
                             {{ form.recurrence_frequency(class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-slate-300 focus:outline-none focus:ring-slate-500/20 focus:border-slate-500 sm:text-sm rounded-md") }}
                         </div>
                     </div>
+                </div>
                 </div>
                 <div class="bg-slate-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
                     <button type="submit" 

@@ -1,6 +1,6 @@
 /**
  * Costs Management Module
- * Handles dynamic behavior for cost entries (list and edit forms).
+ * Handles AJAX delete, toast notifications, and any other dynamic behavior.
  */
 (function() {
     'use strict';
@@ -18,7 +18,7 @@
         // Optional: Initialize Select2 if available and needed
         if (window.$ && $.fn.select2) {
             $('.select2').select2({
-                theme: 'bootstrap-5', // may need to change if you keep bootstrap theme
+                theme: 'bootstrap-5',
                 width: '100%'
             });
         }
@@ -41,7 +41,7 @@
                 // Show loading state
                 const originalHtml = this.innerHTML;
                 this.disabled = true;
-                this.innerHTML = '<span class="inline-block h-4 w-4 animate-spin rounded-full border-2 border-solid border-current border-r-transparent mr-2"></span> Deleting...';
+                this.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
 
                 try {
                     const response = await fetch(`/costs/${costId}/delete`, {
@@ -55,59 +55,29 @@
                     const data = await response.json();
 
                     if (data.success) {
-                        // Remove the row
+                        // Remove the row from the table
                         const row = document.getElementById(`cost-row-${costId}`);
                         if (row) row.remove();
 
-                        // Show success toast
-                        showToast('Cost deleted successfully.', 'success');
+                        // Dispatch toast event for Alpine
+                        window.dispatchEvent(new CustomEvent('notify', {
+                            detail: { message: 'Cost deleted successfully.', type: 'success' }
+                        }));
 
                         // Optionally reload to refresh summary totals (simpler)
                         setTimeout(() => window.location.reload(), 1000);
                     } else {
-                        showToast(data.error || 'Failed to delete cost.', 'danger');
-                        this.disabled = false;
-                        this.innerHTML = originalHtml;
+                        throw new Error(data.error || 'Failed to delete cost.');
                     }
                 } catch (error) {
                     console.error('Delete error:', error);
-                    showToast('An error occurred. Please try again.', 'danger');
+                    window.dispatchEvent(new CustomEvent('notify', {
+                        detail: { message: error.message || 'An error occurred. Please try again.', type: 'danger' }
+                    }));
                     this.disabled = false;
                     this.innerHTML = originalHtml;
                 }
             });
         });
-    }
-
-    /**
-     * Show a custom toast notification using Alpine (or plain DOM).
-     * If Alpine is available, you can dispatch an event; otherwise, create a simple div.
-     */
-    function showToast(message, type = 'success') {
-        // If you're using Alpine, you could dispatch an event that a toast component listens to.
-        // For simplicity, we'll create a temporary toast element.
-        const toastContainer = document.getElementById('toastContainer');
-        if (!toastContainer) {
-            // Create container if not present
-            const container = document.createElement('div');
-            container.id = 'toastContainer';
-            container.className = 'fixed bottom-0 right-0 p-4 z-50 flex flex-col space-y-2';
-            document.body.appendChild(container);
-        }
-
-        const toast = document.createElement('div');
-        toast.className = `px-4 py-3 rounded-md shadow-lg text-white text-sm transform transition-all duration-300 translate-y-0 opacity-100 ${
-            type === 'success' ? 'bg-green-500' : 'bg-red-500'
-        }`;
-        toast.textContent = message;
-
-        const container = document.getElementById('toastContainer');
-        container.appendChild(toast);
-
-        // Auto-remove after 3 seconds
-        setTimeout(() => {
-            toast.classList.add('opacity-0', 'translate-y-2');
-            setTimeout(() => toast.remove(), 300);
-        }, 3000);
     }
 })();
