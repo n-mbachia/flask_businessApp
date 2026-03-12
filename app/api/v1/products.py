@@ -14,7 +14,7 @@ import logging
 
 from app.middleware.rate_limiter import api_rate_limit
 from app import db
-from app.models import Product, InventoryMovement, InventoryLog, Sales
+from app.models import Product, InventoryMovement, Sales
 from app.utils.decorators import handle_exceptions
 from app.security import SecurityUtils
 from app.validators import sanitize_input, check_security, validate_entity
@@ -574,9 +574,14 @@ class ProductInventoryLevels(Resource):
         if not product:
             ns.abort(404, 'Product not found')
 
-        logs = InventoryLog.query.filter_by(product_id=product_id).order_by(InventoryLog.created_at).all()
-        labels = [log.created_at.strftime('%Y-%m-%d') for log in logs]
-        current_stock_series = [log.quantity_after for log in logs]
+        movements = InventoryMovement.query.filter_by(product_id=product_id).order_by(InventoryMovement.created_at).all()
+        labels = []
+        current_stock_series = []
+        running_total = 0
+        for movement in movements:
+            running_total += int(movement.quantity or 0)
+            labels.append(movement.created_at.strftime('%Y-%m-%d'))
+            current_stock_series.append(running_total)
 
         if not labels:
             labels = [datetime.utcnow().strftime('%Y-%m-%d')]

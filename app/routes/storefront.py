@@ -91,7 +91,8 @@ def _build_flash_sale_offer(items):
 
     candidate = max(candidates, key=lambda p: float(p.selling_price_per_unit or 0))
     base_price = float(candidate.selling_price_per_unit or 0)
-    discount_percent = 15 if candidate.quantity_available >= 20 else 10
+    available_stock = candidate.current_stock if candidate.track_inventory else 10_000
+    discount_percent = 15 if available_stock >= 20 else 10
     sale_price = max(base_price * (1 - discount_percent / 100), 0.0)
     promo_code = f"FLASH{candidate.id:04d}"
 

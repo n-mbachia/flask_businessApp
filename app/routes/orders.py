@@ -1099,7 +1099,8 @@ def get_product(product_id):
         'name': product.name,
         'price': float(product.selling_price_per_unit) if product.selling_price_per_unit else 0.0,
         'sku': product.sku,
-        'stock': product.current_stock
+        'stock': product.current_stock if product.track_inventory else None,
+        'track_inventory': product.track_inventory
     })
 
 @orders_bp.route('/api/products/search')
@@ -1131,7 +1132,8 @@ def search_products():
         'sku': p.sku,
         'barcode': p.barcode,
         'price': float(p.selling_price_per_unit) if p.selling_price_per_unit else 0.0,
-        'stock': p.current_stock,
+        'stock': p.current_stock if p.track_inventory else None,
+        'track_inventory': p.track_inventory,
         'category': p.category
     } for p in products]
     

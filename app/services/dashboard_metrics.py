@@ -19,7 +19,7 @@ from flask_login import current_user
 import logging
 
 from app import db
-from app.models import Product, CostEntry, User, Sales, OrderItem, Order
+from app.models import Product, CostEntry, User, Sales, OrderItem, Order, InventoryMovement
 from .analytics_utils import AnalyticsBase, AnalyticsError
 from app.utils.cache import cached
 from app.utils.helpers import format_currency, safe_divide
@@ -399,9 +399,14 @@ class DashboardMetrics(AnalyticsBase):
         try:
             # Get current stock levels
             stock_subquery = db.session.query(
-                InventoryLot.product_id,
-                func.sum(InventoryLot.quantity_received).label('current_stock')
-            ).group_by(InventoryLot.product_id).subquery()
+                InventoryMovement.product_id,
+                func.coalesce(func.sum(InventoryMovement.quantity), 0).label('current_stock')
+            ).join(
+                Product, InventoryMovement.product_id == Product.id
+            ).filter(
+                Product.user_id == self.user_id,
+                Product.track_inventory == True
+            ).group_by(InventoryMovement.product_id).subquery()
             
             # Get inventory status counts
             status = self._retry_query(
@@ -441,7 +446,8 @@ class DashboardMetrics(AnalyticsBase):
                     stock_subquery,
                     Product.id == stock_subquery.c.product_id
                 ).filter(
-                    Product.user_id == self.user_id
+                    Product.user_id == self.user_id,
+                    Product.track_inventory == True
                 ).first(),
                 error_context={
                     'function': '_get_inventory_status',

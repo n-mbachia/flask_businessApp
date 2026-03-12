@@ -170,6 +170,16 @@ class Order(db.Model, BaseModelMixin):
             
         # Update inventory
         from app.services.inventory_service import InventoryService
+
+        # Skip inventory update if movements already exist for this order
+        if InventoryService.has_reference_movements(
+            db_session,
+            reference_id=self.id,
+            reference_types=['order', 'storefront']
+        ):
+            self.status = self.STATUS_COMPLETED
+            self.updated_at = datetime.utcnow()
+            return True
         
         # Prepare inventory updates
         inventory_updates = []

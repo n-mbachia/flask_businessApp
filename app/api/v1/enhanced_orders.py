@@ -91,7 +91,7 @@ class ProductDetails(Resource):
                 'name': product.name,
                 'description': getattr(product, 'description', ''),
                 'price': float(product.price) if hasattr(product, 'price') else float(getattr(product, 'selling_price_per_unit', 0.0)),
-                'stock_quantity': getattr(product, 'quantity_available', None) if getattr(product, 'quantity_available', None) is not None else getattr(product, 'current_stock', 0),
+                'stock_quantity': product.current_stock if getattr(product, 'track_inventory', False) else None,
                 'track_inventory': getattr(product, 'track_inventory', False),
                 'sku': getattr(product, 'sku', ''),
                 'image_url': getattr(product, 'image_url', ''),

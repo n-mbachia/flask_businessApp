@@ -38,10 +38,15 @@ async function initializeCharts() {
     debugLog('Initializing charts...');
     
     try {
-        await loadPlotlyScript();
-        
-        // Chart container IDs
+        // Quarantine legacy analytics: only run when legacy containers exist.
         const chartContainers = ['sankeyChart', 'waterfallChart', 'monthlyChart', 'profitTrendsChart'];
+        const hasLegacyContainers = chartContainers.some(chartId => document.getElementById(chartId));
+        if (!hasLegacyContainers) {
+            debugLog('Legacy analytics containers not found; skipping initialization.');
+            return;
+        }
+
+        await loadPlotlyScript();
         
         // Hide all charts initially and show loading state
         chartContainers.forEach(chartId => {

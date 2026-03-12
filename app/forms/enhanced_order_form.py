@@ -269,7 +269,10 @@ class EnhancedOrderForm(FlaskForm):
             
             choices = [(0, 'Select Product')]
             for product in products:
-                stock_info = f" (Stock: {product.quantity_available})"
+                if product.track_inventory:
+                    stock_info = f" (Stock: {product.current_stock})"
+                else:
+                    stock_info = " (Stock: N/A)"
                 price_info = f" - ${product.selling_price_per_unit:.2f}" if product.selling_price_per_unit else ""
                 display_name = f"{product.name}{stock_info}{price_info}"
                 choices.append((product.id, display_name))

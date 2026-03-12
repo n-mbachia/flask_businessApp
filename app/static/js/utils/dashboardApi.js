@@ -44,7 +44,7 @@ export async function fetchTopProducts(startDate, endDate, limit = 5) {
     end_date: endDate,
     limit: limit
   });
-  const response = await fetch(`/api/v1/analytics/top-products?${params}`, {
+  const response = await fetch(`/api/v1/analytics/products/top?${params}`, {
     headers: getDefaultHeaders()
   });
   return handleResponse(response);

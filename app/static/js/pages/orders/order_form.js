@@ -126,7 +126,10 @@
             orderState.products = products.map(p => ({
                 ...p,
                 price: parseFloat(p.price ?? p.selling_price_per_unit ?? 0) || 0,
-                stock_quantity: parseInt((p.stock ?? p.current_stock ?? p.quantity_available ?? 0), 10) || 0
+                track_inventory: p.track_inventory !== false,
+                stock_quantity: (p.track_inventory === false || p.track_inventory === null)
+                    ? Number.MAX_SAFE_INTEGER
+                    : (parseInt((p.stock ?? p.current_stock ?? p.quantity_available ?? 0), 10) || 0)
             }));
             renderProductResults(orderState.products);
         } catch (error) {
@@ -148,8 +151,11 @@
 
         let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-3">`;
         products.forEach(p => {
-            const outOfStock = p.stock_quantity <= 0;
+            const outOfStock = p.track_inventory && p.stock_quantity <= 0;
             const stockClass = outOfStock ? 'text-red-500' : 'text-gray-600';
+            const stockLabel = p.track_inventory
+                ? (outOfStock ? 'Out of stock' : `In stock: ${p.stock_quantity}`)
+                : 'Stock: Unlimited';
             html += `
                 <div class="border border-gray-200 rounded-lg p-3 product-item" data-product-id="${p.id}">
                     <div class="flex gap-3">
@@ -160,10 +166,10 @@
                             <p class="text-sm font-semibold mt-1">${formatCurrency(p.price)}</p>
                             <p class="text-xs ${stockClass}">
                                 <i class="fas ${outOfStock ? 'fa-exclamation-triangle' : 'fa-check-circle'} mr-1"></i>
-                                ${outOfStock ? 'Out of stock' : `In stock: ${p.stock_quantity}`}
+                                ${stockLabel}
                             </p>
                             <div class="flex items-center gap-2 mt-2">
-                                <input type="number" class="item-quantity w-16 rounded border-gray-300 text-sm" value="1" min="1" max="${p.stock_quantity}" ${outOfStock ? 'disabled' : ''}>
+                                <input type="number" class="item-quantity w-16 rounded border-gray-300 text-sm" value="1" min="1" ${p.track_inventory ? `max=\"${p.stock_quantity}\"` : ''} ${outOfStock ? 'disabled' : ''}>
                                 <input type="checkbox" class="product-checkbox rounded border-gray-300" value="${p.id}" ${outOfStock ? 'disabled' : ''}>
                                 <label class="text-sm">Select</label>
                             </div>
@@ -481,7 +487,7 @@
                     if (!product) return;
                     const qtyInput = cb.closest('.product-item')?.querySelector('.item-quantity');
                     const qty = qtyInput ? parseInt(qtyInput.value) || 1 : 1;
-                    if (qty > product.stock_quantity) {
+                    if (product.track_inventory && qty > product.stock_quantity) {
                         showToast(`Only ${product.stock_quantity} of ${product.name} available`, 'warning');
                         return;
                     }
