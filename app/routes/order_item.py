@@ -287,34 +287,23 @@ def edit_order_item(item_id):
             order = order_item.order
             order.calculate_total()
 
-            db.session.commit()
-
             # Adjust inventory if quantity changed and order is processing
             if (order.status == 'processing' and
                     order_item.product and
                     order_item.product.track_inventory and
                     quantity_diff != 0):
 
-                try:
-                    inventory_service = InventoryService()
-                    inventory_service.adjust_inventory(
-                        product_id=order_item.product_id,
-                        quantity=-quantity_diff,
-                        adjustment_type='sale_update',
-                        reference_id=order.id,
-                        reference_type='order',
-                        notes=f'Order #{order.id} item quantity updated from {old_quantity} to {new_quantity}'
-                    )
-                except Exception as e:
-                    db.session.rollback()
-                    logger.error(f"Error updating inventory: {str(e)}")
-                    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                        return jsonify({
-                            'success': False,
-                            'message': 'Error updating inventory. Please try again.'
-                        }), 500
-                    flash('Error updating inventory. Please try again.', 'error')
-                    return redirect(url_for('orders.view', id=order.id))
+                inventory_service = InventoryService()
+                inventory_service.adjust_inventory(
+                    product_id=order_item.product_id,
+                    quantity=-quantity_diff,
+                    adjustment_type='sale_update',
+                    reference_id=order.id,
+                    reference_type='order',
+                    notes=f'Order #{order.id} item quantity updated from {old_quantity} to {new_quantity}'
+                )
+
+            db.session.commit()
 
             if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
                 return jsonify({
@@ -393,33 +382,22 @@ def delete_order_item(item_id):
         # Update order total
         order.calculate_total()
 
-        db.session.commit()
-
         # Update inventory if order is processing and product tracks inventory
         if (order.status == 'processing' and
                 product and
                 product.track_inventory):
 
-            try:
-                inventory_service = InventoryService()
-                inventory_service.adjust_inventory(
-                    product_id=product.id,
-                    quantity=quantity,
-                    adjustment_type='sale_remove',
-                    reference_id=order.id,
-                    reference_type='order',
-                    notes=f'Order #{order.id} item removed, quantity: {quantity}'
-                )
-            except Exception as e:
-                db.session.rollback()
-                logger.error(f"Error updating inventory: {str(e)}")
-                if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                    return jsonify({
-                        'success': False,
-                        'message': 'Error updating inventory. Please try again.'
-                    }), 500
-                flash('Error updating inventory. Please try again.', 'error')
-                return redirect(url_for('orders.view', id=order.id))
+            inventory_service = InventoryService()
+            inventory_service.adjust_inventory(
+                product_id=product.id,
+                quantity=quantity,
+                adjustment_type='sale_remove',
+                reference_id=order.id,
+                reference_type='order',
+                notes=f'Order #{order.id} item removed, quantity: {quantity}'
+            )
+
+        db.session.commit()
 
         if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return jsonify({

@@ -161,7 +161,11 @@ def complete(id):
                         'success': True,
                         'message': 'Order marked as completed!',
                         'status': order.status,
-                        'status_display': dict(Order.STATUS_CHOICES).get(order.status, order.status)
+                        'status_display': dict(Order.STATUS_CHOICES).get(order.status, order.status),
+                        'payment_status': order.payment_status,
+                        'payment_status_display': dict(Order.PAYMENT_STATUS_CHOICES).get(order.payment_status, order.payment_status),
+                        'source': order.source,
+                        'source_display': getattr(order, 'source_display', None)
                     })
                     
                 flash('Order marked as completed!', 'success')
@@ -956,6 +960,7 @@ def edit(id):
 def cancel(id):
     """Cancel an order and return items to inventory."""
     order = _get_order_or_404(id)
+    is_ajax = request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     
     # Don't allow cancelling already completed or cancelled orders
     if order.status in [Order.STATUS_COMPLETED, Order.STATUS_CANCELLED]:
@@ -968,7 +973,10 @@ def cancel(id):
             )
         except Exception:
             pass
-        flash(f'Cannot cancel an order that is already {order.status}.', 'warning')
+        message = f'Cannot cancel an order that is already {order.status}.'
+        if is_ajax:
+            return jsonify({'success': False, 'message': message}), 400
+        flash(message, 'warning')
         return redirect(url_for('orders.view', id=order.id))
     
     try:
@@ -1025,13 +1033,28 @@ def cancel(id):
                 )
             except Exception:
                 pass
-            flash('Order has been cancelled and items returned to inventory.', 'success')
+            message = 'Order has been cancelled and items returned to inventory.'
+            if is_ajax:
+                return jsonify({
+                    'success': True,
+                    'message': message,
+                    'status': order.status,
+                    'status_display': dict(Order.STATUS_CHOICES).get(order.status, order.status),
+                    'payment_status': order.payment_status,
+                    'payment_status_display': dict(Order.PAYMENT_STATUS_CHOICES).get(order.payment_status, order.payment_status),
+                    'source': order.source,
+                    'source_display': getattr(order, 'source_display', None)
+                })
+            flash(message, 'success')
             return redirect(url_for('orders.view', id=order.id))
             
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error cancelling order {id}: {str(e)}", exc_info=True)
-        flash(f'An error occurred while cancelling the order: {str(e)}', 'danger')
+        message = f'An error occurred while cancelling the order: {str(e)}'
+        if is_ajax:
+            return jsonify({'success': False, 'message': message}), 500
+        flash(message, 'danger')
         return redirect(url_for('orders.view', id=order.id))
 
 @orders_bp.route('/api/calculate-totals', methods=['POST'])
@@ -1298,5 +1321,8 @@ def delete_order(id):
     order = _get_order_or_404(id)
     db.session.delete(order)
     db.session.commit()
-    flash('Order deleted successfully.', 'success')
+    message = 'Order deleted successfully.'
+    if request.is_json or request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'success': True, 'message': message})
+    flash(message, 'success')
     return redirect(url_for('orders.index'))

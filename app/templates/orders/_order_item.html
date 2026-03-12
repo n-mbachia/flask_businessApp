@@ -6,7 +6,10 @@
             <select name="items-{{ index }}-product_id" class="block w-full rounded-md border-gray-300 shadow-sm focus:ring-blue-500 focus:border-blue-500 sm:text-sm product-select" data-product-id="">
                 <option value="">Select product</option>
                 {% for p in products %}
-                    <option value="{{ p.id }}" data-price="{{ p.selling_price_per_unit or 0 }}" data-stock="{{ p.current_stock or 0 }}">{{ p.name }}</option>
+                    <option value="{{ p.id }}"
+                            data-price="{{ p.selling_price_per_unit or 0 }}"
+                            data-track="{{ '1' if p.track_inventory else '0' }}"
+                            data-stock="{{ p.current_stock if p.track_inventory else '' }}">{{ p.name }}</option>
                 {% endfor %}
             </select>
             <div class="product-details mt-2"></div>

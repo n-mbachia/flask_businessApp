@@ -19,7 +19,9 @@ class SecurityConfig:
     CSP_SCRIPT_SRC = [
         "'self'",
         "'strict-dynamic'",  # Better than unsafe-inline
+        "https://code.jquery.com",
         "https://cdn.jsdelivr.net",
+        "https://cdn.datatables.net",
         "https://www.googletagmanager.com", 
         "https://www.google-analytics.com",
         "https://www.google.com",
@@ -32,6 +34,7 @@ class SecurityConfig:
         "'self'",
         "'unsafe-inline'",  # Required for some CSS frameworks
         "https://cdn.jsdelivr.net",
+        "https://cdn.datatables.net",
         "https://fonts.googleapis.com",
         "https://use.fontawesome.com"
     ]

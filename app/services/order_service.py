@@ -415,6 +415,13 @@ class OrderService:
     def _update_inventory_for_order(order: Order, user_id: int, 
                                   validated_items: List[Dict[str, Any]]) -> None:
         """Update inventory for completed order."""
+        if InventoryService.has_reference_movements(
+            db.session,
+            reference_id=order.id,
+            reference_types=['order', 'storefront']
+        ):
+            return
+
         inventory_updates = []
         for item in validated_items:
             inventory_updates.append({

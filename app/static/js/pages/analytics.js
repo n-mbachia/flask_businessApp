@@ -26,22 +26,47 @@ class AnalyticsDashboard {
     }
 
     initDateRangePicker() {
-        $('#reportrange').daterangepicker({
-            startDate: this.dateRange.start,
-            endDate: this.dateRange.end,
-            ranges: {
-                'Today': [moment(), moment()],
-                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
-                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
-                'This Month': [moment().startOf('month'), moment().endOf('month')],
-                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
-            },
-            opens: 'left'
-        }, (start, end) => {
+        if (window.jQuery && $.fn && $.fn.daterangepicker) {
+            $('#reportrange').daterangepicker({
+                startDate: this.dateRange.start,
+                endDate: this.dateRange.end,
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'This Month': [moment().startOf('month'), moment().endOf('month')],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')]
+                },
+                opens: 'left'
+            }, (start, end) => {
+                this.dateRange.start = start;
+                this.dateRange.end = end;
+                this.refreshData();
+            });
+            return;
+        }
+
+        const startInput = document.getElementById('dateStart');
+        const endInput = document.getElementById('dateEnd');
+        if (!startInput || !endInput || typeof moment === 'undefined') {
+            console.warn('Date range picker unavailable; using defaults.');
+            return;
+        }
+
+        startInput.value = this.dateRange.start.format('YYYY-MM-DD');
+        endInput.value = this.dateRange.end.format('YYYY-MM-DD');
+
+        const applyDates = () => {
+            const start = moment(startInput.value, 'YYYY-MM-DD', true);
+            const end = moment(endInput.value, 'YYYY-MM-DD', true);
+            if (!start.isValid() || !end.isValid()) return;
             this.dateRange.start = start;
             this.dateRange.end = end;
             this.refreshData();
-        });
+        };
+
+        startInput.addEventListener('change', applyDates);
+        endInput.addEventListener('change', applyDates);
     }
 
     initEventListeners() {
@@ -60,14 +85,28 @@ class AnalyticsDashboard {
     async refreshData() {
         this.showLoading();
         try {
-            await Promise.all([
-                this.fetchKPI(),
-                this.fetchRevenue(),
-                this.fetchCategories(),
-                this.fetchTopProducts(),
-                this.fetchRecentOrders()
-            ]);
+            const tasks = [
+                { name: 'kpi', run: () => this.fetchKPI() },
+                { name: 'revenue', run: () => this.fetchRevenue() },
+                { name: 'categories', run: () => this.fetchCategories() },
+                { name: 'top products', run: () => this.fetchTopProducts() },
+                { name: 'recent orders', run: () => this.fetchRecentOrders() }
+            ];
+
+            const results = await Promise.allSettled(tasks.map(task => task.run()));
+            const failures = results
+                .map((result, index) => result.status === 'rejected' ? tasks[index].name : null)
+                .filter(Boolean);
+
             this.hideLoading();
+
+            if (failures.length) {
+                if (failures.length === tasks.length) {
+                    this.showError('Failed to load analytics data. Please try again.');
+                } else {
+                    this.showPartialError(`Some analytics data failed to load: ${failures.join(', ')}.`);
+                }
+            }
         } catch (error) {
             console.error('Error refreshing data:', error);
             this.showError('Failed to load analytics data. Please try again.');
@@ -172,6 +211,12 @@ class AnalyticsDashboard {
     }
 
     updateRevenueChart(data) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not available; skipping revenue chart rendering.');
+            this.showPartialError('Charts library failed to load. Revenue chart is unavailable.');
+            return;
+        }
+
         const ctx = document.getElementById('revenueChart');
         if (!ctx) return;
 
@@ -217,6 +262,12 @@ class AnalyticsDashboard {
     }
 
     updateCategoryChart(data) {
+        if (typeof Chart === 'undefined') {
+            console.warn('Chart.js is not available; skipping category chart rendering.');
+            this.showPartialError('Charts library failed to load. Category chart is unavailable.');
+            return;
+        }
+
         const ctx = document.getElementById('categoryChart');
         if (!ctx) return;
 
@@ -261,6 +312,7 @@ class AnalyticsDashboard {
 
     populateTopProducts(products) {
         const tbody = document.getElementById('topProductsBody');
+        if (!tbody) return;
         tbody.innerHTML = '';
         products.forEach(p => {
             const row = tbody.insertRow();
@@ -272,19 +324,29 @@ class AnalyticsDashboard {
             `;
         });
 
-        if ($.fn.DataTable.isDataTable('#topProductsTable')) {
-            $('#topProductsTable').DataTable().destroy();
+        try {
+            if (window.jQuery && $.fn && $.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#topProductsTable')) {
+                    $('#topProductsTable').DataTable().destroy();
+                }
+                $('#topProductsTable').DataTable({
+                    pageLength: 5,
+                    searching: false,
+                    ordering: true,
+                    info: false
+                });
+            } else {
+                console.warn('DataTables not available; rendering basic table only.');
+            }
+        } catch (error) {
+            console.warn('Failed to initialize DataTables for top products:', error);
+            this.showPartialError('Table enhancements failed to load. Showing basic table.');
         }
-        $('#topProductsTable').DataTable({
-            pageLength: 5,
-            searching: false,
-            ordering: true,
-            info: false
-        });
     }
 
     populateRecentOrders(orders) {
         const tbody = document.getElementById('recentOrdersBody');
+        if (!tbody) return;
         tbody.innerHTML = '';
         orders.forEach(o => {
             const row = tbody.insertRow();
@@ -296,15 +358,24 @@ class AnalyticsDashboard {
             `;
         });
 
-        if ($.fn.DataTable.isDataTable('#recentOrdersTable')) {
-            $('#recentOrdersTable').DataTable().destroy();
+        try {
+            if (window.jQuery && $.fn && $.fn.DataTable) {
+                if ($.fn.DataTable.isDataTable('#recentOrdersTable')) {
+                    $('#recentOrdersTable').DataTable().destroy();
+                }
+                $('#recentOrdersTable').DataTable({
+                    pageLength: 5,
+                    searching: false,
+                    ordering: true,
+                    info: false
+                });
+            } else {
+                console.warn('DataTables not available; rendering basic table only.');
+            }
+        } catch (error) {
+            console.warn('Failed to initialize DataTables for recent orders:', error);
+            this.showPartialError('Table enhancements failed to load. Showing basic table.');
         }
-        $('#recentOrdersTable').DataTable({
-            pageLength: 5,
-            searching: false,
-            ordering: true,
-            info: false
-        });
     }
 
     formatCurrency(value) {
@@ -331,6 +402,13 @@ class AnalyticsDashboard {
         document.getElementById('errorState').classList.remove('d-none');
         document.getElementById('loadingState').classList.add('d-none');
         document.getElementById('analyticsContent').classList.add('d-none');
+    }
+
+    showPartialError(message) {
+        document.getElementById('errorMessage').textContent = message;
+        document.getElementById('errorState').classList.remove('d-none');
+        document.getElementById('loadingState').classList.add('d-none');
+        document.getElementById('analyticsContent').classList.remove('d-none');
     }
 }
 

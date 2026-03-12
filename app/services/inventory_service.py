@@ -61,7 +61,9 @@ class InventoryService:
                 return 'return'
             if adj in {'adjustment_in', 'stock_in', 'receipt'}:
                 return 'adjustment_in'
-            if adj in {'adjustment_out', 'stock_out', 'damage', 'shrink'}:
+            if adj in {'damage'}:
+                return 'damage'
+            if adj in {'adjustment_out', 'stock_out', 'shrink'}:
                 return 'adjustment_out'
 
         if ref in {'order', 'sale', 'storefront', 'order_item'}:
@@ -220,8 +222,17 @@ class InventoryService:
                     })
                     continue
 
-                movement_type = cls._resolve_movement_type(reference_type, quantity_change)
-                normalized_qty = int(abs(quantity_change))
+                adjustment_type = update.get('adjustment_type') or update.get('movement_type')
+                movement_type = cls._resolve_movement_type(reference_type, quantity_change, adjustment_type=adjustment_type)
+                normalized_qty = int(round(abs(quantity_change)))
+                if normalized_qty == 0:
+                    results.append({
+                        'success': True,
+                        'message': 'No inventory change requested',
+                        'product_id': product_id,
+                        'quantity_change': 0
+                    })
+                    continue
                 signed_delta = cls._movement_delta(movement_type, normalized_qty)
 
                 # Get current stock from movements
@@ -288,6 +299,14 @@ class InventoryService:
         """Adjust inventory for a single product via an inventory movement."""
         session = db_session or db.session
 
+        if quantity == 0:
+            return True, [{
+                'success': True,
+                'message': 'No inventory change requested',
+                'product_id': product_id,
+                'quantity_change': 0
+            }]
+
         product = session.query(Product).filter_by(id=product_id).with_for_update().first()
         if not product:
             raise ValidationError(f'Product not found: {product_id}')
@@ -306,7 +325,14 @@ class InventoryService:
             }]
 
         movement_type = cls._resolve_movement_type(reference_type, quantity, adjustment_type=adjustment_type)
-        normalized_qty = int(abs(quantity))
+        normalized_qty = int(round(abs(quantity)))
+        if normalized_qty == 0:
+            return True, [{
+                'success': True,
+                'message': 'No inventory change requested',
+                'product_id': product_id,
+                'quantity_change': 0
+            }]
         signed_delta = cls._movement_delta(movement_type, normalized_qty)
         current_stock = cls._get_current_stock(session, product_id)
         new_stock = current_stock + signed_delta

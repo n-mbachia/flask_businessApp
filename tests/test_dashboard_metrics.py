@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 from sqlalchemy.exc import SQLAlchemyError
 
-from app.dashboard_metrics import DashboardMetrics, PerformanceAnalyzer
+from mn_venturesApp.businessApp.tests.dashboard_metrics import DashboardMetrics, PerformanceAnalyzer
 from app import db
 from app.models import Product, Sales, Costs, User
 

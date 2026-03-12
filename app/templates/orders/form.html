@@ -138,7 +138,8 @@
                                         {% for p in products %}
                                             <option value="{{ p.id }}"
                                                     data-price="{{ p.selling_price_per_unit or 0 }}"
-                                                    data-stock="{{ p.current_stock or 0 }}"
+                                                    data-track="{{ '1' if p.track_inventory else '0' }}"
+                                                    data-stock="{{ p.current_stock if p.track_inventory else '' }}"
                                                     {% if p.id == item.product_id %}selected{% endif %}>
                                                 {{ p.name }}
                                             </option>

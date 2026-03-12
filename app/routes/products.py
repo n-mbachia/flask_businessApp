@@ -397,6 +397,7 @@ def adjust_stock(product_id):
                 updates=[{
                     'product_id': product.id,
                     'quantity_change': qty_change,
+                    'adjustment_type': movement_type,
                     'unit_cost': form.unit_cost.data or product.cogs_per_unit,
                     'notes': form.notes.data
                 }],
